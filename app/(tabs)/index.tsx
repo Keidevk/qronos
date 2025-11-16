@@ -1,98 +1,111 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { useRouter } from "expo-router";
+import React, { useState } from 'react'; // 👈 Importar useState
+import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const safeareaInsets = useSafeAreaInsets();
+  const fondo = require('../../assets/images/wave.png');
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // 1. Definir los estados para el correo y la contraseña
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  function navigateToRegister() {
+    router.push('/(tabs)/account/register');
+  }
+
+  function Test() {
+    console.log("Test function called");
+    console.log("Email:", email);
+    console.log("Password:", password);
+  }
+
+  return (
+    <View style={{ backgroundColor: '#ffffff', }}>
+      <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
+        <Text style={styles.Titulo}>Inicia Sesión</Text>
+        
+        <TextInput
+          placeholder="Correo Electrónico"
+          style={styles.TextInput}
+          value={email} 
+          onChangeText={setEmail} 
+          keyboardType="email-address" 
+          autoCapitalize="none"
+        >
+        </TextInput>
+        
+        <TextInput
+          placeholder="Contraseña"
+          style={styles.TextInput}
+          value={password} 
+          onChangeText={setPassword} 
+          secureTextEntry={true} 
+        >
+        </TextInput>
+        
+        <TouchableOpacity onPress={navigateToRegister}>
+          <Text style={styles.textRegister}>¿Aún no tienes cuenta? Registrate</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity onPress={Test} style={styles.button}>
+          <Text style={styles.textButton}>Iniciar Sesión</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <ImageBackground source={fondo} style={styles.background} resizeMode="cover">
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  textRegister: {
+    marginTop: 5,
+    marginLeft: "35%",
+    textDecorationStyle: 'solid',
+    textDecorationLine: 'underline',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  button: {
+    backgroundColor: "#000b76",
+    width: "50%",
+    height: "20%",
+    marginLeft: "25%",
+    marginTop: 30,
+    paddingTop: '4.5%',
+    borderRadius: 15,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  textButton: {
+    textAlign: "center",
+    color: "#ffffff",
+  },
+  containerLogin: {
+    marginTop: "50%",
+  },
+  background: {
+    backgroundColor: '#ffffff',
+    flex: 1,
+    zIndex: -1,
     position: 'absolute',
+    top: "55%",
+    width: '100%',
+    height: '100%',
   },
+  Titulo: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    marginLeft: "27%",
+  },
+  TextInput: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginTop: 20,
+    width: "80%",
+    marginLeft: "10%",
+    paddingLeft: 15,
+    borderRadius: 15,
+  }
 });

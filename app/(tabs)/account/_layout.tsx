@@ -7,21 +7,13 @@ export default function TabLayout() {
   return (
     <Tabs>
       <Tabs.Screen
-        name="index"
+        name="register"
         options={{
           headerShown: false,
           tabBarShowLabel: false,
           tabBarStyle: { display: 'none' },
         }}
       ></Tabs.Screen>
-      <Tabs.Screen
-      name="account"
-      options={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: { display: 'none' },
-      }}
-    ></Tabs.Screen>
     </Tabs>
   );
 }
