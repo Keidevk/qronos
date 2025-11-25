@@ -1,51 +1,23 @@
 import { useRouter } from "expo-router";
-import React, { useState } from 'react';
 import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type TipoCliente = 'Empresa' | 'Natural' | null;
 
 export default function Register() {
     const safeareaInsets = useSafeAreaInsets();
-    const [tipoCliente, setTipoCliente] = useState<TipoCliente>('Natural'); 
 
     const fondo = require('../../../assets/images/wave.png');
     const router = useRouter();
     
     function handleRegister() {
-        console.log('Cliente Seleccionado:', tipoCliente);
+        console.log("Register function called");
     }
 
-    const selectTipoCliente = (tipo: TipoCliente) => {
-        setTipoCliente(tipo);
-    };
 
-    const SelectionButton = ({ title, type }: { title: string, type: TipoCliente }) => (
-        <TouchableOpacity
-            onPress={() => selectTipoCliente(type)}
-            style={[
-                styles.selectionButtonContainer,
-                tipoCliente === type && styles.selected
-            ]}
-        >
-            <Text 
-                style={[
-                    styles.selectionButtonText,
-                    tipoCliente === type && styles.selectedText
-                ]}
-            >
-                {title}
-            </Text>
-        </TouchableOpacity>
-    );
     return (
         <View style={styles.fullScreenContainer}>
             <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
                 <Text style={styles.Titulo}>Registro</Text>
-                <View style={styles.clientTypeContainer}>
-                    <SelectionButton title="Natural" type="Natural" />
-                    <SelectionButton title="Empresa" type="Empresa" />
-                </View>
                 <TextInput
                     placeholder="Nombre Completo"
                     style={styles.TextInput}
@@ -112,7 +84,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffffff',
         zIndex: -1,
         position: 'absolute',
-        top: '60%', 
+        top: '80%', 
         width: '100%',
         height: '100%',
     },
