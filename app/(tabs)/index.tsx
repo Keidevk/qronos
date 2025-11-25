@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import React, { useState } from 'react'; // 👈 Importar useState
-import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useState } from 'react';
+import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
@@ -8,7 +8,6 @@ export default function HomeScreen() {
   const fondo = require('../../assets/images/wave.png');
   const router = useRouter();
 
-  // 1. Definir los estados para el correo y la contraseña
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -20,6 +19,24 @@ export default function HomeScreen() {
     console.log("Test function called");
     console.log("Email:", email);
     console.log("Password:", password);
+    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/cliente/login`,{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email,
+        password: password,
+      }),
+    } ).then( response => response.json() ).then( data => {
+      if(data.code === 200) {
+        Alert.alert("Login Successful", `Welcome back, ${data.cliente}!` );
+        console.log("Cliente Data:", data);
+      } else {
+        Alert.alert("Login Failed", "Invalid email or password. Please try again.");
+      }
+    } 
+  )
   }
 
   return (

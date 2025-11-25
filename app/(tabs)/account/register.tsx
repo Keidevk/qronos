@@ -1,42 +1,82 @@
 import { useRouter } from "expo-router";
-import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 
 export default function Register() {
     const safeareaInsets = useSafeAreaInsets();
-
     const fondo = require('../../../assets/images/wave.png');
     const router = useRouter();
-    
-    function handleRegister() {
-        console.log("Register function called");
-    }
 
+    const [nombreCompleto, setNombreCompleto] = useState("");
+    const [correo, setCorreo] = useState("");
+    const [contrasena, setContrasena] = useState("");
+
+    async function handleRegister() {
+        console.log("Register function called");
+
+        try {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/cliente/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nombreCompleto: nombreCompleto,
+                    correo: correo,
+                    contrasena: contrasena
+                })
+            });
+
+            const data = await response.json();
+            if (data.code !== 201) {
+                Alert.alert(`Error ${response.status}`, `${data.message}`);
+                return;
+            }else {
+                console.log("Respuesta del servidor:", data);
+                Alert.alert("Registro Exitoso", "¡Te has registrado correctamente!");
+                router.replace('/(tabs)')
+            }
+
+        } catch (error) {
+            console.error("Error en el registro:", error);
+            Alert.alert("Error de Registro", "Hubo un problema al registrarse. Por favor, inténtalo de nuevo.");
+        }
+    }
 
     return (
         <View style={styles.fullScreenContainer}>
             <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
                 <Text style={styles.Titulo}>Registro</Text>
+                
                 <TextInput
                     placeholder="Nombre Completo"
                     style={styles.TextInput}
+                    value={nombreCompleto}
+                    onChangeText={setNombreCompleto}
                 />
+                
                 <TextInput
                     placeholder="Correo Electrónico"
                     style={styles.TextInput}
+                    value={correo}
+                    onChangeText={setCorreo}
+                    autoCapitalize="none"
                 />
+                
                 <TextInput
                     placeholder="Contraseña"
                     secureTextEntry={true}
                     style={styles.TextInput}
+                    value={contrasena}
+                    onChangeText={setContrasena}
                 />
+                
                 <TouchableOpacity onPress={handleRegister} style={styles.button}>
                     <Text style={styles.textButton}>Registrarse</Text>
                 </TouchableOpacity>
             </View>
             <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
-
         </View>
     );
 }
