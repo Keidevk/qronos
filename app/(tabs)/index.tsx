@@ -30,8 +30,9 @@ export default function HomeScreen() {
       }),
     } ).then( response => response.json() ).then( data => {
       if(data.code === 200) {
-        Alert.alert("Login Successful", `Welcome back, ${data.cliente}!` );
-        console.log("Cliente Data:", data);
+        // Alert.alert("Login Successful", `Welcome back, ${data.cliente}!` );
+        // console.log("Cliente Data:", data);
+        router.replace('/(tabs)/dashboard');
       } else {
         Alert.alert("Login Failed", "Invalid email or password. Please try again.");
       }
