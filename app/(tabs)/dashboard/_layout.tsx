@@ -1,23 +1,48 @@
+import { useFocusEffect } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 
 
 
 export default function TabLayout() {
     const [empresaState,setEmpresaState] = useState(false)
-    useEffect(()=>{
-        async function getEmpresa(){
-            const empresa_id = await SecureStore.getItem('empresa_id')
-            if(empresa_id){
-                setEmpresaState(true)
-            }else{
-                setEmpresaState(false)
+
+    useFocusEffect(
+        useCallback(() => {
+            async function getEmpresa(){
+                const empresa_id = await SecureStore.getItemAsync('empresa_id')
+                if(empresa_id){
+                    setEmpresaState(true)
+                    console.log('ES EMPRESA')
+                }else{
+                    setEmpresaState(false)
+                    console.log('ES CLIENTE')
+                }
             }
-        }
         getEmpresa()
-    },[])
+
+
+    
+    
+          return () => {
+            getEmpresa()
+          };
+        }, [])
+      );
+    
+    // useEffect(()=>{
+    //     async function getEmpresa(){
+    //         const empresa_id = await SecureStore.getItemAsync('empresa_id')
+    //         if(empresa_id){
+    //             setEmpresaState(true)
+    //         }else{
+    //             setEmpresaState(false)
+    //         }
+    //     }
+    //     getEmpresa()
+    // },[])
 
   return (
     <>
@@ -118,6 +143,17 @@ export default function TabLayout() {
                 title: 'overview',
             }}
             ></Drawer.Screen>
+            <Drawer.Screen
+            name='close'
+            options={{
+                headerShown: false,
+                drawerLabelStyle:{color:'#f3f2f2ff',borderRadius:10,backgroundColor:'#e52222ff',paddingVertical:10,textAlign:'center'},
+                drawerLabel:'Cerrar Sesión',
+                title:'overview',
+                
+            }}
+            >
+            </Drawer.Screen>
             
         </Drawer>}
     </>
