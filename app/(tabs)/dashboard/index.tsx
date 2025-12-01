@@ -30,20 +30,16 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigator.openDrawer()}>
-          {/* Icono de hamburguesa simple hecho con texto o puedes usar un Icono real */}
           <Text style={styles.hamburgerIcon}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dashboard</Text>
-        <View style={{width: 30}} /> {/* Espaciador para centrar título */}
+        <View style={{width: 30}} /> 
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.welcomeText}>Explora Lugares</Text>
 
-        {/* Renderizado de la lista de lugares */}
         {dataLugares.map((lugar) => (
           <View key={lugar.id} style={styles.card}>
             <Image source={{ uri: lugar.imagen }} style={styles.cardImage} />
