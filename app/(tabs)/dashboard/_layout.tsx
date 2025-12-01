@@ -1,23 +1,48 @@
+import { useFocusEffect } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 
 
 
 export default function TabLayout() {
     const [empresaState,setEmpresaState] = useState(false)
-    useEffect(()=>{
-        async function getEmpresa(){
-            const empresa_id = await SecureStore.getItemAsync('empresa_id')
-            if(empresa_id){
-                setEmpresaState(true)
-            }else{
-                setEmpresaState(false)
+
+    useFocusEffect(
+        useCallback(() => {
+            async function getEmpresa(){
+                const empresa_id = await SecureStore.getItemAsync('empresa_id')
+                if(empresa_id){
+                    setEmpresaState(true)
+                    console.log('ES EMPRESA')
+                }else{
+                    setEmpresaState(false)
+                    console.log('ES CLIENTE')
+                }
             }
-        }
         getEmpresa()
-    },[])
+
+
+    
+    
+          return () => {
+            getEmpresa()
+          };
+        }, [])
+      );
+    
+    // useEffect(()=>{
+    //     async function getEmpresa(){
+    //         const empresa_id = await SecureStore.getItemAsync('empresa_id')
+    //         if(empresa_id){
+    //             setEmpresaState(true)
+    //         }else{
+    //             setEmpresaState(false)
+    //         }
+    //     }
+    //     getEmpresa()
+    // },[])
 
   return (
     <>
