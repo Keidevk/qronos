@@ -9,7 +9,7 @@ export default function TabLayout() {
     const [empresaState,setEmpresaState] = useState(false)
     useEffect(()=>{
         async function getEmpresa(){
-            const empresa_id = await SecureStore.getItem('empresa_id')
+            const empresa_id = await SecureStore.getItemAsync('empresa_id')
             if(empresa_id){
                 setEmpresaState(true)
             }else{
@@ -118,6 +118,17 @@ export default function TabLayout() {
                 title: 'overview',
             }}
             ></Drawer.Screen>
+            <Drawer.Screen
+            name='close'
+            options={{
+                headerShown: false,
+                drawerLabelStyle:{color:'#f3f2f2ff',borderRadius:10,backgroundColor:'#e52222ff',paddingVertical:10,textAlign:'center'},
+                drawerLabel:'Cerrar Sesión',
+                title:'overview',
+                
+            }}
+            >
+            </Drawer.Screen>
             
         </Drawer>}
     </>
