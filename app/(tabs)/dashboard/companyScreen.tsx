@@ -1,107 +1,178 @@
 import { useNavigation } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as SecureStore from 'expo-secure-store';
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+
+/**
+ * Hook que valida acceso según:
+ * - empresa_id → autorizado
+ * - user_id sin empresa_id → acceso NO autorizado
+ */
+const useEmpresaCheck = () => {
+    const [isAuthorized, setIsAuthorized] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        const checkAccess = async () => {
+            try {
+                const empresaId = await SecureStore.getItemAsync('empresa_id');
+                const userId = await SecureStore.getItemAsync('user_id');
+
+                if (empresaId) {
+                    setIsAuthorized(true);
+                } 
+                else if (!empresaId && userId) {
+                    setIsAuthorized(false);
+                    setErrorMessage("Tu cuenta no es de Empresa. Acceso no autorizado.");
+                } 
+                else {
+                    setIsAuthorized(false);
+                    setErrorMessage("No se encontró información de acceso. Inicia sesión nuevamente.");
+                }
+
+            } catch (error) {
+                console.error("Error leyendo datos de SecureStore:", error);
+                setIsAuthorized(false);
+                setErrorMessage("Error al validar credenciales. Intenta nuevamente.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        checkAccess();
+    }, []);
+
+    return { isAuthorized, isLoading, errorMessage };
+};
 
 export default function CompanyScreen() {
     const navigator = useNavigation();
-    
-  return (
-    <View style={styles.centerContainer}>
-      <Text style={styles.textBase}>Módulo de Empresa</Text>
-      <Text style={styles.subText}>Configuración lista para vincular.</Text>
-      {/* TODO: LÓGICA DE LINKEO
-         Aquí puedes usar Linking.openURL('https://tuempresa.com') 
-         o navegar a una webview interna.
-      */}
-        <TouchableOpacity onPress={() => navigator.openDrawer()}>
-                  {/* Icono de hamburguesa simple hecho con texto o puedes usar un Icono real */}
-                  <Text style={styles.hamburgerIcon}>☰</Text>
-        </TouchableOpacity>
-    </View>
-  );
+    const { isAuthorized, isLoading, errorMessage } = useEmpresaCheck();
+    const scheme = useColorScheme();
+    const dark = scheme === "dark";
+
+    const [totalScans, setTotalScans] = useState<number | null>(null);
+
+    // Traer total de escaneos de la empresa
+    useEffect(() => {
+        const fetchTotalScans = async () => {
+            try {
+                const empresaId = await SecureStore.getItemAsync('empresa_id');
+                if (!empresaId) return;
+
+                const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/metricas/empresa/${empresaId}`);
+                const metricas = await response.json();
+
+                // Sumar todas las vecesScan
+                const total = metricas.reduce((acc: number, m: any) => acc + m.vecesScan, 0);
+                setTotalScans(total);
+
+            } catch (error) {
+                console.error("Error al traer total de escaneos:", error);
+            }
+        };
+
+        fetchTotalScans();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={[styles.subText, { marginTop: 15 }]}>Verificando acceso...</Text>
+            </View>
+        );
+    }
+
+    if (!isAuthorized) {
+        return (
+            <View style={styles.centerContainer}>
+                <Text style={styles.textBase}>🚫 Acceso Denegado</Text>
+                <Text style={styles.subText}>
+                    {errorMessage || "No tienes permisos para acceder a este módulo."}
+                </Text>
+            </View>
+        );
+    }
+
+    return (
+        <View style={[styles.companyContainer, { backgroundColor: dark ? "#0D0D0D" : "#F3F4F6" }]}>
+            <TouchableOpacity 
+                onPress={() => navigator.openDrawer()}
+                style={{ position: "absolute", top: 20, right: 20, zIndex: 20 }}
+            >
+                <Text style={{ fontSize: 30, color: dark ? "#fff" : "#000" }}>☰</Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.header, { color: dark ? "#FFFFFF" : "#1F2937" }]}>
+                Panel de Empresa
+            </Text>
+
+            <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1 }]}>
+                <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
+                    Total de escaneos
+                </Text>
+                <Text style={[styles.scanNumber, { color: dark ? "#4F9CF9" : "#2563EB" }]}>
+                    {totalScans !== null ? totalScans : "Cargando..."}
+                </Text>
+            </View>
+        </View>
+    );
 }
 
+/* ------------------ ESTILOS ------------------ */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000', // FONDO NEGRO SOLICITADO
-  },
-  centerContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  // Cabecera
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50, // Ajuste para SafeArea
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#111',
-  },
-  hamburgerIcon: {
-    fontSize: 30,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  // Contenido
-  scrollContent: {
-    padding: 20,
-  },
-  welcomeText: {
-    fontSize: 24,
-    color: '#fff',
-    marginBottom: 20,
-    fontWeight: 'bold',
-  },
-  textBase: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subText: {
-    color: '#aaa',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  // Tarjetas (Cards) de lugares
-  card: {
-    backgroundColor: '#1c1c1c', // Un gris muy oscuro para contrastar con el negro
-    borderRadius: 15,
-    marginBottom: 25,
-    overflow: 'hidden',
-    elevation: 5, // Sombra para Android
-    shadowColor: '#fff', // Sombra sutil para iOS
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  cardImage: {
-    width: '100%',
-    height: 180,
-    resizeMode: 'cover',
-  },
-  cardTextContainer: {
-    padding: 15,
-  },
-  cardTitle: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  cardDesc: {
-    fontSize: 14,
-    color: '#ccc',
-    lineHeight: 20,
-  },
+    centerContainer: {
+    flex: 1, 
+    backgroundColor: '#000', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: 20 
+    },
+    textBase: {
+         color: '#fff', 
+         fontSize: 22, 
+         fontWeight: 'bold', 
+         marginBottom: 10 
+    },
+    subText: { 
+        color: '#aaa', 
+        fontSize: 16, 
+        textAlign: 'center' 
+
+    },
+    companyContainer: {
+         flex: 1, 
+         padding: 20,
+    },
+    header: { 
+        fontSize: 26, 
+        fontWeight: "bold", 
+        marginBottom: 20, 
+        marginTop: 40, 
+        textAlign: "center" 
+    },
+    card: { 
+        backgroundColor: "#fff", 
+        padding: 18, 
+        borderRadius: 20, 
+        shadowColor: "#000", 
+        shadowOpacity: 0.1, 
+        shadowRadius: 8, 
+        elevation: 4, 
+        marginBottom: 25,
+        marginTop: 225
+
+    },
+
+    smallTitle: { 
+        fontSize: 16 
+    },
+    
+    scanNumber: { 
+        fontSize: 42, 
+        fontWeight: "bold", 
+        marginTop: 3 
+    },
 });
