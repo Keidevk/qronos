@@ -100,12 +100,12 @@ export default function CompanyScreen() {
         <View style={[styles.companyContainer, { backgroundColor: dark ? "#0D0D0D" : "#F3F4F6" }]}>
             <TouchableOpacity 
                 onPress={() => navigator.openDrawer()}
-                style={{ position: "absolute", top: 20, right: 20, zIndex: 20 }}
+                style={{ position: "absolute", top: 50, right: 20, zIndex: 20 }}
             >
                 <Text style={{ fontSize: 30, color: dark ? "#fff" : "#000" }}>☰</Text>
             </TouchableOpacity>
 
-            <Text style={[styles.header, { color: dark ? "#FFFFFF" : "#1F2937" }]}>
+            <Text style={[styles.header, { top: 40, color: dark ? "#FFFFFF" : "#1F2937" }]}>
                 Panel de Empresa
             </Text>
 
@@ -162,8 +162,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8, 
         elevation: 4, 
         marginBottom: 25,
-        marginTop: 225
-
+        marginTop: 220
     },
 
     smallTitle: { 
