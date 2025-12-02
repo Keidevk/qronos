@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     marginHorizontal:'auto',
     marginVertical:20,
     fontSize:20,
-    fontWeight:800
+    fontWeight: 900
   },
   qrStyle:{
     backgroundColor:'rgba(255, 255, 255, 0)',
@@ -201,14 +201,18 @@ const styles = StyleSheet.create({
     paddingTop: 50, // Ajuste para SafeArea
     paddingHorizontal: 20,
     paddingBottom: 15,
+    
   },
   hamburgerIcon: {
     fontSize: 30,
     fontWeight: 'bold',
+    top: -30
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    marginTop: 160,
+    
   },
   // Contenido
   scrollContent: {
