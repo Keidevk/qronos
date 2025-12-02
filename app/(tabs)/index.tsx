@@ -70,6 +70,10 @@ export default function HomeScreen() {
         const nombreEmpresa = data.empresa
         const userId = data.token; 
         const empresaId = data.token_empresa;
+        const jwt = data.jwt;
+
+        await SecureStore.setItemAsync('jwt', jwt);
+        console.log("JWT guardado en SecureStore:", jwt); 
 
         if (userId) {
             // Guarda el token como user_id
