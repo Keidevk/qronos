@@ -8,18 +8,15 @@ import { useCallback, useState } from 'react';
 
 export default function TabLayout() {
     const [empresaState,setEmpresaState] = useState(false)
-
     useFocusEffect(
         useCallback(() => {
             async function getEmpresa(){
                 const empresa_id = await SecureStore.getItemAsync('empresa_id')
-                if(empresa_id){
-                    setEmpresaState(true)
-                    console.log('ES EMPRESA')
-                }else{
-                    setEmpresaState(false)
-                    console.log('ES CLIENTE')
-                }
+                    if(empresa_id){
+                        setEmpresaState(true)
+                    }else{
+                        setEmpresaState(false)
+                    }
             }
         getEmpresa()
 

@@ -67,75 +67,51 @@ export default function HomeScreen() {
             // 2. 🥈 INTENTAR LOGIN COMO CLIENTE
             response = await fetch(LOGIN_CLIENTE_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: loginBody,
-            });
-            data = await response.json();
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                }),
+        });
+ 
+        const data = await response.json();
 
-            if (response.status === 200) {
-                // Éxito como Cliente
-                return { type: 'cliente', data };
-            }
-        }
+        if(data.code === 200) {
+            Alert.alert("Login Successful", `Welcome back, ${data.cliente}!` );
+            console.log("Cliente Data:", data);
         
-        // Si fallan ambos intentos, o si hay un error 500
-        return { type: 'fail', data, statusCode: response.status };
-    }
-    // ----------------------------------------------------
-    
-    async function handleLogin() {
-        try {
-            // 1. INICIAR SESIÓN CON FIREBASE AUTH
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+        // 🚨 Lógica de SecureStore: Guardar el ID
+        // ASUME que tu API devuelve 'client_id' aquí.
+        const nombreCliente = data.cliente
+        const nombreEmpresa = data.empresa
+        const userId = data.token; 
+        const empresaId = data.token_empresa;
 
-            // 2. FORZAR LA RECARGA y VERIFICAR EL ESTADO
-            await reload(user);
+        if (userId) {
+            // Guarda el token como user_id
+            await SecureStore.setItemAsync('user_id', String(userId));
+            await SecureStore.setItemAsync('nameCliente',String(nombreCliente))
+            console.log("UserID guardado en SecureStore:", userId);
+        } else {
+            console.warn("Advertencia: No se encontró 'data.token' en la respuesta del login.");
+        }
 
-            if (!user.emailVerified) {
-                Alert.alert(
-                    "Verificación Requerida", 
-                    "Tu correo aún no está verificado. Por favor, revisa tu bandeja de entrada y haz clic en el enlace."
-                );
-                return;
-            }
-            
-            // 3. LLAMAR AL BACKEND CON LA LÓGICA DUAL
-            const backendResult = await attemptBackendLogin(email, password);
-            const data = backendResult.data;
+        if(empresaId){
+            // Guarda el token_empresa como empresa_id
+            await SecureStore.setItemAsync('empresa_id',String(empresaId))
+            await SecureStore.setItemAsync('nameEmpresa',String(nombreEmpresa))
+            console.log('EmpresaId guardado en SecureStore:', empresaId)
+        }else{
+         console.warn("Advertencia: No se encontró 'data.token_empresa' en la respuesta del login.")
+        }
 
-            if (backendResult.type !== 'fail' && data.code === 200) {
-                // 4. Éxito: Guardar Tokens/IDs
-                const isEmpresa = backendResult.type === 'empresa';
-                
-                const nameKey = isEmpresa ? 'nameEmpresa' : 'nameCliente';
-                const idKey = isEmpresa ? 'empresa_id' : 'user_id';
-                const tokenKey = isEmpresa ? 'token_empresa' : 'token';
-                const nameValue = isEmpresa ? data.empresa : data.cliente;
-                const idValue = data[tokenKey]; // Usa la clave dinámica
-
-                Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${nameValue}!` );
-                
-                // Guardar los datos del perfil (Empresa o Cliente)
-                if (idValue) {
-                    await SecureStore.setItemAsync(idKey, String(idValue));
-                    await SecureStore.setItemAsync(nameKey, String(nameValue));
-                }
-                
-                // Si la respuesta incluye datos de ambos (login de cliente lo hacía)
-                if (data.token && !isEmpresa) { 
-                    await SecureStore.setItemAsync('user_id', String(data.token));
-                    await SecureStore.setItemAsync('nameCliente',String(data.cliente));
-                }
-
-                router.replace('/(tabs)/dashboard'); 
-            
-            } else {
-                // Fallo del Backend (404/500, o perfil no encontrado en ninguna tabla)
-                const msg = data.message || "Error de red o perfil no encontrado en ambas bases de datos.";
-                Alert.alert("Error de Datos", `Error al obtener perfil: ${msg}`);
-            }
-
+            router.replace('/(tabs)/dashboard'); // Navegación al dashboard
+        
+        } else {
+            Alert.alert("Error al intentar iniciar sesión", "Correo o contraseña erronea, intente de nuevo.");
+        }
         } catch (error) {
             console.error("Error en el login (Firebase o Conexión):", error);
             // Manejar errores de Firebase

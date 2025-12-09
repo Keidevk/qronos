@@ -12,11 +12,13 @@ export default function QRScreen() {
     const [messageState,setMessageState] = useState('')
     async function CreateMetricasQr(qr_token:string,puntos:number){
       const empresa_id = await SecureStore.getItemAsync('empresa_id')
+      const jwt = await SecureStore.getItemAsync('jwt')
       try{
         const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/metricas/register-scan`,{
           method:"POST",
           headers: {
                       'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
                   },
           body:JSON.stringify({
             qr_token:qr_token,

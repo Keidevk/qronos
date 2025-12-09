@@ -22,6 +22,8 @@ export default function ProfileScreen() {
    */
   useFocusEffect(
     useCallback(() => {
+        let jwt = '';
+
       // Función principal que orquesta la carga de datos y la generación del QR
       async function loadUserDataAndGenerateQr() {
         // 1. Iniciar la carga y limpiar datos anteriores
@@ -31,11 +33,13 @@ export default function ProfileScreen() {
 
         let secureUserId = ''; // Variable local para pasar el ID inmediatamente
         let secureNameCliente = '';
-
         try {
           // --- 1. OBTENER DATOS DE SECURESTORE ---
           secureUserId = await SecureStore.getItemAsync('user_id') || '';
           secureNameCliente = await SecureStore.getItemAsync('nameCliente') || '';
+          jwt = await SecureStore.getItemAsync('jwt') || '';
+
+          console.log("Datos obtenidos de SecureStore:",jwt)
 
           // Actualizar estados
           setUserIdState(secureUserId);
@@ -70,6 +74,7 @@ export default function ProfileScreen() {
             method: "POST",
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
             },
             body: JSON.stringify({
               client_id: parseInt(clientId, 10),
