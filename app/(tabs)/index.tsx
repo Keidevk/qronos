@@ -3,14 +3,15 @@ import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// Importaciones de Firebase Auth
+// Importaciones de Firebase Auth (Añadidas, necesarias para el login completo)
 import { reload, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../src/firebaseConfig'; // 🚨 AJUSTA LA RUTA SI ES NECESARIO
 
-// Define las URLs de tus APIs
+// Define las URLs de tus APIs (Añadidas, necesarias para el login completo)
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_EMPRESA_URL = `${API_URL}/api/empresa/login`;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
+
 
 export default function HomeScreen() {
     const safeareaInsets = useSafeAreaInsets();
@@ -23,9 +24,15 @@ export default function HomeScreen() {
     useEffect(() => {
         async function checkUserIdAndRedirect() {
             try {
+                // 1. Buscar el valor 'user_id' o 'empresa_id' en el SecureStore
                 const userId = await SecureStore.getItemAsync('user_id');
-                if (userId) {
-                    console.log(`User ID encontrado: ${userId}. Redirigiendo...`);
+                const empresaId = await SecureStore.getItemAsync('empresa_id'); // Verificar si ya hay sesión de empresa
+
+                // 2. Verificar si el valor existe
+                if (userId || empresaId) {
+                    console.log(`Sesión encontrada. Redirigiendo...`);
+                    
+                    // 3. Redirigir a la pestaña de dashboard
                     router.replace('/(tabs)/dashboard');
                 } else {
                     console.log('User ID no encontrado. Permaneciendo en la pantalla.');
@@ -41,92 +48,96 @@ export default function HomeScreen() {
         router.push('/(tabs)/account/register');
     }
 
-    // --- NUEVA FUNCIÓN QUE MANEJA LA LLAMADA AL BACKEND ---
-    async function attemptBackendLogin(email: string, password: string) {
-        // Objeto a enviar en el body (solo necesitamos el email para buscar el perfil en el backend)
-        const loginBody = JSON.stringify({ email: email, password: password });
-
-        // 1. 🥇 INTENTAR LOGIN COMO EMPRESA
-        let response = await fetch(LOGIN_EMPRESA_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: loginBody,
-        });
-        let data = await response.json();
-
-        if (response.status === 200) {
-            // Éxito como Empresa
-            return { type: 'empresa', data };
-        } 
+    // Renombramos 'Test' a 'handleLogin' por claridad
+    async function handleLogin() {
+        console.log("Login function called");
+        console.log("Email:", email);
         
-        // Si no es 200, y el error NO es un fallo de conexión/servidor (500), 
-        // asumimos que el perfil no existe en la tabla de Empresas (404/Error de Datos).
-        if (response.status === 404 || data.message.includes("no encontrado")) {
-            console.log("No es Empresa. Intentando como Cliente...");
+        try {
+            // 1. AUTENTICACIÓN FIREBASE
+            // Esto asegura que el correo y la contraseña son correctos antes de ir al backend
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            
+            await reload(user); // Recargar datos para verificar estado (como emailVerified)
+            
+            if (!user.emailVerified) {
+                Alert.alert(
+                    "Verificación Requerida", 
+                    "Tu correo aún no está verificado. Por favor, revisa tu bandeja de entrada."
+                );
+                return;
+            }
 
-            // 2. 🥈 INTENTAR LOGIN COMO CLIENTE
-            response = await fetch(LOGIN_CLIENTE_URL, {
+            // 2. LLAMADA AL BACKEND (Intento de cliente por simplicidad, aunque se recomienda el dual)
+            // Usaremos la ruta de cliente y la estructura de guardado de la versión anterior
+            const response = await fetch(LOGIN_CLIENTE_URL,{
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    email: email,
+                    // Enviamos email y password, aunque solo el email suele ser necesario si la validación es solo en backend
+                    email: email, 
                     password: password,
                 }),
-        });
- 
-        const data = await response.json();
+            });
+    
+            const data = await response.json();
 
-        if(data.code === 200) {
-            Alert.alert("Login Successful", `Welcome back, ${data.cliente}!` );
-            console.log("Cliente Data:", data);
-        
-        // 🚨 Lógica de SecureStore: Guardar el ID
-        // ASUME que tu API devuelve 'client_id' aquí.
-        const nombreCliente = data.cliente
-        const nombreEmpresa = data.empresa
-        const userId = data.token; 
-        const empresaId = data.token_empresa;
+            if(data.code === 200) {
+                Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
+                
+                // 3. Lógica de SecureStore (incluyendo 'jwt' y dualidad Cliente/Empresa)
+                const nombreCliente = data.cliente
+                const nombreEmpresa = data.empresa
+                const userId = data.token; 
+                const empresaId = data.token_empresa;
+                const jwt = data.jwt; // 👈 CLAVE: Si tu API lo devuelve, lo guardamos.
 
-        if (userId) {
-            // Guarda el token como user_id
-            await SecureStore.setItemAsync('user_id', String(userId));
-            await SecureStore.setItemAsync('nameCliente',String(nombreCliente))
-            console.log("UserID guardado en SecureStore:", userId);
-        } else {
-            console.warn("Advertencia: No se encontró 'data.token' en la respuesta del login.");
-        }
+                if (jwt) {
+                    await SecureStore.setItemAsync('jwt', String(jwt));
+                    console.log("JWT guardado en SecureStore:", jwt); 
+                }
 
-        if(empresaId){
-            // Guarda el token_empresa como empresa_id
-            await SecureStore.setItemAsync('empresa_id',String(empresaId))
-            await SecureStore.setItemAsync('nameEmpresa',String(nombreEmpresa))
-            console.log('EmpresaId guardado en SecureStore:', empresaId)
-        }else{
-         console.warn("Advertencia: No se encontró 'data.token_empresa' en la respuesta del login.")
-        }
+                if (userId) {
+                    await SecureStore.setItemAsync('user_id', String(userId));
+                    await SecureStore.setItemAsync('nameCliente',String(nombreCliente))
+                    console.log("UserID guardado:", userId);
+                } else {
+                    console.warn("Advertencia: No se encontró 'data.token' para Cliente.");
+                }
 
-            router.replace('/(tabs)/dashboard'); // Navegación al dashboard
-        
-        } else {
-            Alert.alert("Error al intentar iniciar sesión", "Correo o contraseña erronea, intente de nuevo.");
-        }
-        } catch (error) {
+                if(empresaId){
+                    await SecureStore.setItemAsync('empresa_id',String(empresaId))
+                    await SecureStore.setItemAsync('nameEmpresa',String(nombreEmpresa))
+                    console.log('EmpresaId guardado:', empresaId)
+                }else{
+                   console.warn("Advertencia: No se encontró 'data.token_empresa' para Empresa.")
+                }
+
+                router.replace('/(tabs)/dashboard'); 
+            
+            } else {
+                // Si Firebase Auth fue exitoso, pero tu API de backend falla (ej. datos faltantes en DB)
+                Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos. Contacta a soporte.");
+            }
+
+        } catch (error: any) {
             console.error("Error en el login (Firebase o Conexión):", error);
-            // Manejar errores de Firebase
+            
             let errorMessage = "Ocurrió un error al intentar iniciar sesión. Intenta de nuevo.";
             if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
                 errorMessage = "Correo o contraseña incorrecta, intente de nuevo.";
             } 
+            
             Alert.alert("Error de Inicio de Sesión", errorMessage);
         }
     }
 
     return (
-        // El JSX se mantiene igual
         <View style={{ backgroundColor: '#ffffff', }}>
-            <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
+           <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
                 <Text style={styles.Titulo}>Inicia Sesión</Text>
                 
                 <TextInput
@@ -147,15 +158,15 @@ export default function HomeScreen() {
                 /> 
                 
                 <TouchableOpacity onPress={navigateToRegister}>
-                    <Text style={styles.textRegister}>¿Aún no tienes cuenta? Regístrate</Text>
+                    <Text style={styles.textRegister}>¿Aún no tienes cuenta? Registrate</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity onPress={handleLogin} style={styles.button}>
                     <Text style={styles.textButton}>Iniciar Sesión</Text>
                 </TouchableOpacity>
-            </View>
-            
-            <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
+           </View>
+           
+           <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
         </View>
     );
 }
