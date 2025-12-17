@@ -53,28 +53,41 @@ export default function CompanyScreen() {
     const dark = scheme === "dark";
 
     const [totalScans, setTotalScans] = useState<number | null>(null);
+    const [totalPoints, setTotalPoints] = useState<number | null>(null);
 
-    // Traer total de escaneos de la empresa
+    // Traer métricas de la empresa
     useEffect(() => {
-        const fetchTotalScans = async () => {
+        const fetchMetrics = async () => {
             try {
                 const empresaId = await SecureStore.getItemAsync('empresa_id');
                 if (!empresaId) return;
 
                 const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/metricas/empresa/${empresaId}`);
+                
+                // Corrección: El backend devuelve un array directo []
                 const metricas = await response.json();
 
-                // Sumar todas las vecesScan
-                const total = metricas.reduce((acc: number, m: any) => acc + m.vecesScan, 0);
-                setTotalScans(total);
+                if (Array.isArray(metricas)) {
+                    // Sumar todas las vecesScan (convertido a Number por seguridad)
+                    const scans = metricas.reduce((acc: number, m: any) => acc + (Number(m.vecesScan) || 0), 0);
+                    setTotalScans(scans);
+
+                    // Sumar todos los puntos (convertido a Number por seguridad)
+                    const points = metricas.reduce((acc: number, m: any) => acc + (Number(m.puntos) || 0), 0);
+                    setTotalPoints(points);
+                } else {
+                    // En caso de que no sea un array o venga vacío
+                    setTotalScans(0);
+                    setTotalPoints(0);
+                }
 
             } catch (error) {
-                console.error("Error al traer total de escaneos:", error);
+                console.error("Error al traer métricas:", error);
             }
         };
 
-        fetchTotalScans();
-    }, []);
+        if (isAuthorized) fetchMetrics();
+    }, [isAuthorized]);
 
     if (isLoading) {
         return (
@@ -99,7 +112,7 @@ export default function CompanyScreen() {
     return (
         <View style={[styles.companyContainer, { backgroundColor: dark ? "#0D0D0D" : "#F3F4F6" }]}>
             <TouchableOpacity 
-                onPress={() => navigator.openDrawer()}
+                onPress={() => (navigator as any).openDrawer()}
                 style={{ position: "absolute", top: 50, right: 20, zIndex: 20 }}
             >
                 <Text style={{ fontSize: 30, color: dark ? "#fff" : "#000" }}>☰</Text>
@@ -109,13 +122,26 @@ export default function CompanyScreen() {
                 Panel de Empresa
             </Text>
 
-            <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1 }]}>
-                <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
-                    Total de escaneos
-                </Text>
-                <Text style={[styles.scanNumber, { color: dark ? "#4F9CF9" : "#2563EB" }]}>
-                    {totalScans !== null ? totalScans : "Cargando..."}
-                </Text>
+            <View style={{ marginTop: 150 }}>
+                {/* Visualización de Puntos */}
+                <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1, marginBottom: 15 }]}>
+                    <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
+                        Total de puntos otorgados
+                    </Text>
+                    <Text style={[styles.scanNumber, { color: "#10B981" }]}>
+                        {totalPoints !== null ? totalPoints : "Cargando..."}
+                    </Text>
+                </View>
+
+                {/* Visualización de Escaneos */}
+                <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1 }]}>
+                    <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
+                        Total de escaneos
+                    </Text>
+                    <Text style={[styles.scanNumber, { color: dark ? "#4F9CF9" : "#2563EB" }]}>
+                        {totalScans !== null ? totalScans : "Cargando..."}
+                    </Text>
+                </View>
             </View>
         </View>
     );
@@ -124,11 +150,11 @@ export default function CompanyScreen() {
 /* ------------------ ESTILOS ------------------ */
 const styles = StyleSheet.create({
     centerContainer: {
-    flex: 1, 
-    backgroundColor: '#000', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    padding: 20 
+        flex: 1, 
+        backgroundColor: '#000', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        padding: 20 
     },
     textBase: {
          color: '#fff', 
@@ -140,7 +166,6 @@ const styles = StyleSheet.create({
         color: '#aaa', 
         fontSize: 16, 
         textAlign: 'center' 
-
     },
     companyContainer: {
          flex: 1, 
@@ -162,13 +187,10 @@ const styles = StyleSheet.create({
         shadowRadius: 8, 
         elevation: 4, 
         marginBottom: 25,
-        marginTop: 220
     },
-
     smallTitle: { 
         fontSize: 16 
     },
-    
     scanNumber: { 
         fontSize: 42, 
         fontWeight: "bold", 
