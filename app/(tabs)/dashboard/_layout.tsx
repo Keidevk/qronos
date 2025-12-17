@@ -3,11 +3,9 @@ import { Drawer } from 'expo-router/drawer';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from 'react';
 
-
-
-
 export default function TabLayout() {
     const [empresaState,setEmpresaState] = useState(false)
+    
     useFocusEffect(
         useCallback(() => {
             async function getEmpresa(){
@@ -19,140 +17,120 @@ export default function TabLayout() {
                     }
             }
         getEmpresa()
-
-
-    
-    
-          return () => {
-            getEmpresa()
-          };
         }, [])
-      );
-    
-    // useEffect(()=>{
-    //     async function getEmpresa(){
-    //         const empresa_id = await SecureStore.getItemAsync('empresa_id')
-    //         if(empresa_id){
-    //             setEmpresaState(true)
-    //         }else{
-    //             setEmpresaState(false)
-    //         }
-    //     }
-    //     getEmpresa()
-    // },[])
+    );
 
-  return (
-    <>
-        {empresaState ? 
-        <Drawer>
-            <Drawer.Screen
-            name="index"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'Inicio',
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name="companyScreen"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'Empresa',
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name="qrScreen"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'QR Scanner',
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name="profileScreen"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'Perfil',
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name='close'
-            options={{
-                headerShown: false,
-                drawerLabelStyle:{color:'#f3f2f2ff',borderRadius:10,backgroundColor:'#e52222ff',paddingVertical:10,textAlign:'center'},
-                drawerLabel:'Cerrar Sesión',
-                title:'overview',
-                
-            }}
-            >
-            </Drawer.Screen>
-        </Drawer>:
-        <Drawer>
-            <Drawer.Screen
-            name="index"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'Inicio',
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name="companyScreen"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'Empresa',
-                drawerItemStyle:{display:'none'},
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name="qrScreen"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'QR Scanner',
-                drawerItemStyle:{display:'none'},
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name="profileScreen"
-            options={{
-                drawerActiveBackgroundColor:"#f3f2f2ff",
-                drawerActiveTintColor:"#1c1c1c",
-                headerShown: false,
-                drawerLabel: 'Perfil',
-                title: 'overview',
-            }}
-            ></Drawer.Screen>
-            <Drawer.Screen
-            name='close'
-            options={{
-                headerShown: false,
-                drawerLabelStyle:{color:'#f3f2f2ff',borderRadius:10,backgroundColor:'#e52222ff',paddingVertical:10,textAlign:'center'},
-                drawerLabel:'Cerrar Sesión',
-                title:'overview',
-                
-            }}
-            >
-            </Drawer.Screen>
+    // 1. Estilos Comunes de Navegación (Alineación a la izquierda con margen)
+    const drawerCommonOptions = {
+        drawerActiveBackgroundColor: "#f3f2f2ff", 
+        drawerActiveTintColor: "#000b76", 
+        drawerInactiveTintColor: "#333333", 
+        // Margen negativo para empujar el texto hacia donde estaría el ícono
+        drawerLabelStyle: {
+            fontSize: 16,
+            fontWeight: '600',
+            marginLeft: 5, // Se mantiene para alineación de ítems normales
+        },
+        headerShown: false,
+    }
+
+    const drawerStyles = {
+        drawerStyle: {
+            backgroundColor: '#ffffff',
+            width: 280,
+        },
+        drawerContentStyle: {
+            backgroundColor: '#ffffff',
+        },
+    }
+    
+    // 2. Opción para Cerrar Sesión (Centrado y visible)
+    const closeSessionOptions = {
+        headerShown: false,
+        drawerLabel: 'Cerrar Sesión',
+        title: 'overview',
+        // Estilo del contenedor (Botón rojo)
+        drawerItemStyle: {
+            marginTop: 20, 
+            marginHorizontal: 15, 
+            borderRadius: 15,
+            backgroundColor: '#e52222ff',
+            // 🔥 Quitamos estas propiedades de centrado del padre, y centramos el texto hijo.
+            // justifyContent: 'center', 
+            // alignItems: 'center', 
+        },
+        // Estilo del texto
+        drawerLabelStyle: {
+            // Heredamos solo el tamaño de fuente y peso
+            fontSize: 16,
+            fontWeight: '600',
             
-        </Drawer>}
-    </>
-  );
+            // 🔥 SOLUCIÓN: Forzamos el color y el ancho y centrado.
+            color: '#ffffff', 
+            width: '100%', // El texto ocupa todo el ancho del drawer item (rojo)
+            textAlign: 'center', 
+            marginLeft: 10, // Aseguramos no tener margen negativo
+            paddingVertical: 5, // Aumentamos un poco el padding vertical para más cuerpo
+            
+        }
+    }
+
+    const navigationItemOptions = {
+        ...drawerCommonOptions
+    }
+
+
+    return (
+        <>
+            <Drawer
+                screenOptions={{
+                    ...drawerStyles,
+                }}
+            >
+                {/* -------------------- PANTALLAS BÁSICAS (Común) -------------------- */}
+                <Drawer.Screen
+                name="index"
+                options={{
+                    ...navigationItemOptions,
+                    drawerLabel: 'Inicio',
+                }}
+                />
+                
+                <Drawer.Screen
+                name="profileScreen"
+                options={{
+                    ...navigationItemOptions,
+                    drawerLabel: 'Perfil',
+                }}
+                />
+
+                {/* -------------------- PANTALLAS CONDICIONALES -------------------- */}
+                <Drawer.Screen
+                name="companyScreen"
+                options={{
+                    ...navigationItemOptions,
+                    drawerLabel: 'Empresa',
+                    drawerItemStyle: !empresaState ? { display: 'none' } : undefined,
+                }}
+                />
+
+                <Drawer.Screen
+                name="qrScreen"
+                options={{
+                    ...navigationItemOptions,
+                    drawerLabel: 'QR Scanner',
+                    drawerItemStyle: !empresaState ? { display: 'none' } : undefined,
+                }}
+                />
+                
+                {/* -------------------- CERRAR SESIÓN (Centrado y visible) -------------------- */}
+                <Drawer.Screen
+                name='close'
+                options={{
+                    ...closeSessionOptions,
+                }}
+                />
+            </Drawer>
+        </>
+    );
 }

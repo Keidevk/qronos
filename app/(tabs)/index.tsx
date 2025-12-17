@@ -3,15 +3,21 @@ import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// Importaciones de Firebase Auth (Añadidas, necesarias para el login completo)
+// Importaciones de Firebase Auth
 import { reload, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../src/firebaseConfig'; // 🚨 AJUSTA LA RUTA SI ES NECESARIO
+import { auth } from '../../src/firebaseConfig';
 
-// Define las URLs de tus APIs (Añadidas, necesarias para el login completo)
+// Define las URLs de tus APIs
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_EMPRESA_URL = `${API_URL}/api/empresa/login`;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
 
+// Componente Footer para QRONNOS
+const QronnosFooter = () => (
+    <View style={styles.footerContainer}>
+        <Text style={styles.footerText}>QRONNOS</Text>
+    </View>
+);
 
 export default function HomeScreen() {
     const safeareaInsets = useSafeAreaInsets();
@@ -24,15 +30,11 @@ export default function HomeScreen() {
     useEffect(() => {
         async function checkUserIdAndRedirect() {
             try {
-                // 1. Buscar el valor 'user_id' o 'empresa_id' en el SecureStore
                 const userId = await SecureStore.getItemAsync('user_id');
-                const empresaId = await SecureStore.getItemAsync('empresa_id'); // Verificar si ya hay sesión de empresa
+                const empresaId = await SecureStore.getItemAsync('empresa_id'); 
 
-                // 2. Verificar si el valor existe
                 if (userId || empresaId) {
                     console.log(`Sesión encontrada. Redirigiendo...`);
-                    
-                    // 3. Redirigir a la pestaña de dashboard
                     router.replace('/(tabs)/dashboard');
                 } else {
                     console.log('User ID no encontrado. Permaneciendo en la pantalla.');
@@ -48,39 +50,27 @@ export default function HomeScreen() {
         router.push('/(tabs)/account/register');
     }
 
-    // Renombramos 'Test' a 'handleLogin' por claridad
     async function handleLogin() {
         console.log("Login function called");
         console.log("Email:", email);
         
         try {
             // 1. AUTENTICACIÓN FIREBASE
-            // Esto asegura que el correo y la contraseña son correctos antes de ir al backend
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
             
-            await reload(user); // Recargar datos para verificar estado (como emailVerified)
+            await reload(user); 
             
             if (!user.emailVerified) {
-                Alert.alert(
-                    "Verificación Requerida", 
-                    "Tu correo aún no está verificado. Por favor, revisa tu bandeja de entrada."
-                );
+                Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
                 return;
             }
 
-            // 2. LLAMADA AL BACKEND (Intento de cliente por simplicidad, aunque se recomienda el dual)
-            // Usaremos la ruta de cliente y la estructura de guardado de la versión anterior
+            // 2. LLAMADA AL BACKEND
             const response = await fetch(LOGIN_CLIENTE_URL,{
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    // Enviamos email y password, aunque solo el email suele ser necesario si la validación es solo en backend
-                    email: email, 
-                    password: password,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: password }),
             });
     
             const data = await response.json();
@@ -88,134 +78,204 @@ export default function HomeScreen() {
             if(data.code === 200) {
                 Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
                 
-                // 3. Lógica de SecureStore (incluyendo 'jwt' y dualidad Cliente/Empresa)
                 const nombreCliente = data.cliente
                 const nombreEmpresa = data.empresa
                 const userId = data.token; 
                 const empresaId = data.token_empresa;
-                const jwt = data.jwt; // 👈 CLAVE: Si tu API lo devuelve, lo guardamos.
+                const jwt = data.jwt;
 
-                if (jwt) {
-                    await SecureStore.setItemAsync('jwt', String(jwt));
-                    console.log("JWT guardado en SecureStore:", jwt); 
-                }
+                if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
 
                 if (userId) {
                     await SecureStore.setItemAsync('user_id', String(userId));
                     await SecureStore.setItemAsync('nameCliente',String(nombreCliente))
-                    console.log("UserID guardado:", userId);
-                } else {
-                    console.warn("Advertencia: No se encontró 'data.token' para Cliente.");
                 }
 
                 if(empresaId){
                     await SecureStore.setItemAsync('empresa_id',String(empresaId))
                     await SecureStore.setItemAsync('nameEmpresa',String(nombreEmpresa))
-                    console.log('EmpresaId guardado:', empresaId)
-                }else{
-                   console.warn("Advertencia: No se encontró 'data.token_empresa' para Empresa.")
                 }
 
                 router.replace('/(tabs)/dashboard'); 
             
             } else {
-                // Si Firebase Auth fue exitoso, pero tu API de backend falla (ej. datos faltantes en DB)
-                Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos. Contacta a soporte.");
+                Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
             }
 
         } catch (error: any) {
-            console.error("Error en el login (Firebase o Conexión):", error);
-            
-            let errorMessage = "Ocurrió un error al intentar iniciar sesión. Intenta de nuevo.";
+            console.error("Error en el login:", error);
+            let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
             if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-                errorMessage = "Correo o contraseña incorrecta, intente de nuevo.";
+                errorMessage = "Correo o contraseña incorrecta.";
             } 
-            
             Alert.alert("Error de Inicio de Sesión", errorMessage);
         }
     }
 
     return (
-        <View style={{ backgroundColor: '#ffffff', }}>
+        <View style={styles.fullContainer}>
            <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
+                
                 <Text style={styles.Titulo}>Inicia Sesión</Text>
                 
-                <TextInput
-                    placeholder="Correo Electrónico"
-                    style={styles.TextInput}
-                    value={email} 
-                    onChangeText={setEmail} 
-                    keyboardType="email-address" 
-                    autoCapitalize="none"
-                /> 
+                {/* Caja de Email con Sombra */}
+                <View style={styles.inputShadowContainer}>
+                    <TextInput
+                        placeholder="Correo Electrónico"
+                        placeholderTextColor="#7D7D7D" 
+                        style={styles.TextInput}
+                        value={email} 
+                        onChangeText={setEmail} 
+                        keyboardType="email-address" 
+                        autoCapitalize="none"
+                    /> 
+                </View>
                 
-                <TextInput
-                    placeholder="Contraseña"
-                    style={styles.TextInput}
-                    value={password} 
-                    onChangeText={setPassword} 
-                    secureTextEntry={true} 
-                /> 
+                {/* Caja de Password con Sombra */}
+                <View style={styles.inputShadowContainer}>
+                    <TextInput
+                        placeholder="Contraseña"
+                        placeholderTextColor="#7D7D7D" 
+                        style={styles.TextInput}
+                        value={password} 
+                        onChangeText={setPassword} 
+                        secureTextEntry={true} 
+                    /> 
+                </View>
                 
                 <TouchableOpacity onPress={navigateToRegister}>
-                    <Text style={styles.textRegister}>¿Aún no tienes cuenta? Registrate</Text>
+                    <Text style={styles.textRegister}>¿Aún no tienes cuenta? <Text style={{fontWeight: 'bold', color: '#000b76'}}>Regístrate</Text></Text>
                 </TouchableOpacity>
                 
+                {/* Botón con Sombra Levantada */}
                 <TouchableOpacity onPress={handleLogin} style={styles.button}>
-                    <Text style={styles.textButton}>Iniciar Sesión</Text>
+                    <Text style={styles.textButton}>INGRESAR</Text>
                 </TouchableOpacity>
+
            </View>
            
            <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
+           
+           {/* Cartel QRONNOS */}
+           <QronnosFooter />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    textRegister: {
-        marginTop: 5,
-        marginLeft: "35%",
-        textDecorationStyle: 'solid',
-        textDecorationLine: 'underline',
+    fullContainer: {
+        backgroundColor: '#ffffff',
+        flex: 1,
     },
+    Titulo: {
+        fontSize: 32,
+        fontWeight: '800', 
+        color: '#000b76', 
+        textAlign: 'center',
+        marginBottom: 30,
+        letterSpacing: 0.5,
+    },
+    containerLogin: {
+        marginTop: "35%", 
+        paddingHorizontal: 30, 
+    },
+    
+    // ESTILO DE SOMBRA LEVANTADA PARA INPUTS
+    inputShadowContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 15,
+        marginBottom: 20,
+        width: "100%",
+        height: 55,
+        justifyContent: 'center',
+        
+        // Sombra iOS
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+        
+        // Sombra Android (Elevation)
+        elevation: 8, 
+    },
+    TextInput: {
+        flex: 1,
+        paddingHorizontal: 20,
+        fontSize: 16,
+        color: '#333333',
+        borderRadius: 15, 
+    },
+
+    textRegister: {
+        marginTop: 10,
+        textAlign: 'center',
+        color: '#666',
+        fontSize: 14,
+    },
+
+    // ESTILO DE BOTÓN CON SOMBRA LEVANTADA
     button: {
         backgroundColor: "#000b76",
-        width: "50%",
-        height: "20%",
-        marginLeft: "25%",
+        width: "100%", 
+        height: 60, 
         marginTop: 30,
-        paddingTop: '4.5%',
         borderRadius: 15,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 40, // Espacio antes de llegar al borde inferior/footer
+
+        // Sombra iOS
+        shadowColor: "#000b76", 
+        shadowOffset: {
+            width: 0,
+            height: 8,
+        },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+
+        // Sombra Android
+        elevation: 10,
     },
     textButton: {
         textAlign: "center",
         color: "#ffffff",
+        fontSize: 18,
+        fontWeight: 'bold',
+        letterSpacing: 1,
     },
-    containerLogin: {
-        marginTop: "50%",
-    },
+
     background: {
         backgroundColor: '#ffffff',
         flex: 1,
         zIndex: -1,
         position: 'absolute',
-        top: "55%",
+        top: "60%", // Ajustado para el footer
         width: '100%',
         height: '100%',
+        opacity: 0.8,
     },
-    Titulo: {
-        fontSize: 30,
-        fontWeight: 'bold',
-        marginLeft: "27%",
+    
+    // 🔥 ESTILOS PARA EL CARTEL QRONNOS (Efecto Neón)
+    footerContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 70, // Altura del cartel
+        backgroundColor: '#000b76', // Fondo azul oscuro
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    TextInput: {
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        marginTop: 20,
-        width: "80%",
-        marginLeft: "10%",
-        paddingLeft: 15,
-        borderRadius: 15,
+    footerText: {
+        fontSize: 35,
+        fontWeight: '900',
+        color: '#FFFFFF', // Texto en blanco brillante
+        letterSpacing: 8,
+        textShadowColor: 'rgba(45, 156, 219, 0.9)', // Sombra azul brillante para el efecto neón
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 10, 
     }
 });
