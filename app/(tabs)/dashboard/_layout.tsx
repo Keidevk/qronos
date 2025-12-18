@@ -130,14 +130,7 @@ export default function TabLayout() {
                     drawerItemStyle: !empresaState ? { display: 'none' } : undefined,
                 }}
                 />
-                
-                {/* -------------------- CERRAR SESIÓN (Centrado y visible) -------------------- */}
-                <Drawer.Screen
-                name='close'
-                options={{
-                    ...closeSessionOptions,
-                }}
-                />
+
                 <Drawer.Screen
                 name='admin'
                 options={{
@@ -146,6 +139,15 @@ export default function TabLayout() {
                     drawerItemStyle: !adminState ? { display: 'none' } : undefined 
                 }}
                 />
+                
+                {/* -------------------- CERRAR SESIÓN (Centrado y visible) -------------------- */}
+                <Drawer.Screen
+                name='close'
+                options={{
+                    ...closeSessionOptions,
+                }}
+                />
+                
             </Drawer>
         </>
     );
