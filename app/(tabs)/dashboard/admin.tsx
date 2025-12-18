@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // 2. Escribe 'ipconfig' (Windows) o 'ifconfig' (Mac/Linux).
 // 3. Busca la dirección IPv4 (ej. 192.168.1.15).
 // 4. Asegúrate que tu celular y tu PC estén en la MISMA red Wi-Fi.
-const API_URL = 'http://192.168.68.105:3000'; // <--- CAMBIA LA 'X' POR TU NÚMERO
+const API_URL = process.env.EXPO_PUBLIC_API_URL; // <--- CAMBIA LA 'X' POR TU NÚMERO
 
 // --- TIPOS DE DATOS ---
 interface Empresa {
