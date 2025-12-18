@@ -65,7 +65,7 @@ export default function Register() {
                     "Registro Exitoso", 
                     "¡Te has registrado! Revisa tu correo para **verificar tu cuenta** antes de iniciar sesión."
                 );
-                router.replace('/(tabs)/account/login'); 
+                router.replace('../../index'); // Redirigir al inicio o a la pantalla de login
             }
 
         } catch (error: any) {
