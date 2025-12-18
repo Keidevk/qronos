@@ -5,15 +5,22 @@ import { useCallback, useState } from 'react';
 
 export default function TabLayout() {
     const [empresaState,setEmpresaState] = useState(false)
+    const [adminState,setAdminState] = useState(false)
     
     useFocusEffect(
         useCallback(() => {
             async function getEmpresa(){
                 const empresa_id = await SecureStore.getItemAsync('empresa_id')
+                const admin = await SecureStore.getItemAsync('rol')
                     if(empresa_id){
                         setEmpresaState(true)
                     }else{
                         setEmpresaState(false)
+                    }
+                    if(admin === 'Admin'){
+                        setAdminState(true)
+                    }else{
+                        setAdminState(false)
                     }
             }
         getEmpresa()
@@ -101,6 +108,7 @@ export default function TabLayout() {
                 options={{
                     ...navigationItemOptions,
                     drawerLabel: 'Perfil',
+                    drawerItemStyle: empresaState ? { display: 'none' } : undefined,
                 }}
                 />
 
@@ -110,7 +118,7 @@ export default function TabLayout() {
                 options={{
                     ...navigationItemOptions,
                     drawerLabel: 'Empresa',
-                    drawerItemStyle: !empresaState ? { display: 'none' } : undefined,
+                    drawerItemStyle: !empresaState ? { display: 'none' } : undefined
                 }}
                 />
 
@@ -128,6 +136,14 @@ export default function TabLayout() {
                 name='close'
                 options={{
                     ...closeSessionOptions,
+                }}
+                />
+                <Drawer.Screen
+                name='admin'
+                options={{
+                    ...navigationItemOptions,
+                    drawerLabel: 'Administración',
+                    drawerItemStyle: !adminState ? { display: 'none' } : undefined 
                 }}
                 />
             </Drawer>

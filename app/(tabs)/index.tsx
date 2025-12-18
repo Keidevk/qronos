@@ -53,6 +53,7 @@ export default function HomeScreen() {
     async function handleLogin() {
         console.log("Login function called");
         console.log("Email:", email);
+        console.log("Password:", password)
         
         try {
             // 1. AUTENTICACIÓN FIREBASE
@@ -74,8 +75,7 @@ export default function HomeScreen() {
             });
     
             const data = await response.json();
-
-            if(data.code === 200) {
+            if(response.ok && data.code === 200) {
                 Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
                 
                 const nombreCliente = data.cliente
@@ -83,8 +83,11 @@ export default function HomeScreen() {
                 const userId = data.token; 
                 const empresaId = data.token_empresa;
                 const jwt = data.jwt;
+                const rol = data.rol;
 
                 if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
+
+                if(rol) await SecureStore.setItemAsync('rol', String(rol));
 
                 if (userId) {
                     await SecureStore.setItemAsync('user_id', String(userId));
