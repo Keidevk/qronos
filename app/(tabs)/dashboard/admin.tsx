@@ -46,11 +46,19 @@ export default function AdminDashboardScreen() {
   const [metricasRaw, setMetricasRaw] = useState<Metrica[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [jwtState, setJwt] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadJwt = async () => {
+      const jwt = await SecureStore.getItemAsync('jwt')
+      setJwt(jwt)
+    }
+    loadJwt()
+  }, []);
 
   const fetchData = async () => {
     try {
       console.log("Iniciando petición a:", API_URL);
-      const jwt = await SecureStore.getItemAsync('jwt')
       
 
       // Obtenemos empresas y métricas
@@ -58,13 +66,13 @@ export default function AdminDashboardScreen() {
         fetch(`${API_URL}/api/empresa`,{
            headers: {
                       'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
+                      'Authorization': `Bearer ${jwtState}`, // Usamos el JWT para autorización
                   },
         }),
         fetch(`${API_URL}/api/metricas`,{
           headers: {
                       'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
+                      'Authorization': `Bearer ${jwtState}`, // Usamos el JWT para autorización
                   },
         }) 
       ]);
