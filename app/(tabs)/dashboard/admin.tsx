@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,15 +15,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// --- CONFIGURACIÓN DE API ---
-// ⚠️ IMPORTANTE: 
-// 1. Abre la terminal (CMD/Terminal) en tu PC.
-// 2. Escribe 'ipconfig' (Windows) o 'ifconfig' (Mac/Linux).
-// 3. Busca la dirección IPv4 (ej. 192.168.1.15).
-// 4. Asegúrate que tu celular y tu PC estén en la MISMA red Wi-Fi.
-const API_URL = process.env.EXPO_PUBLIC_API_URL; // <--- CAMBIA LA 'X' POR TU NÚMERO
 
-// --- TIPOS DE DATOS ---
+const API_URL = process.env.EXPO_PUBLIC_API_URL; 
+
 interface Empresa {
   empresa_id: number;
   nombreCompleto: string;
@@ -55,15 +50,26 @@ export default function AdminDashboardScreen() {
   const fetchData = async () => {
     try {
       console.log("Iniciando petición a:", API_URL);
+      const jwt = await SecureStore.getItemAsync('jwt')
+      
 
       // Obtenemos empresas y métricas
       const [empresasRes, metricasRes] = await Promise.all([
-        fetch(`${API_URL}/api/empresa`),
-        fetch(`${API_URL}/api/metricas`) 
+        fetch(`${API_URL}/api/empresa`,{
+           headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
+                  },
+        }),
+        fetch(`${API_URL}/api/metricas`,{
+          headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
+                  },
+        }) 
       ]);
 
       // --- CORRECCIÓN DE PARSEO DE DATOS ---
-      // Tu backend devuelve arrays directos [ ... ], no objetos { empresas: ... }
       
       if (empresasRes.ok) {
         const empresasData = await empresasRes.json();
