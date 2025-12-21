@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { EventSubscription } from 'expo-modules-core';
 import * as Notifications from 'expo-notifications';
@@ -94,8 +93,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
       return undefined;
     }
 
-    const projectId =
-      Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    const projectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID;
 
     if (!projectId) {
       console.error("Error: No se encontró el Project ID en app.json. Asegúrate de tener configurado EAS.");
