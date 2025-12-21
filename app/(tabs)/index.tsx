@@ -1,3 +1,4 @@
+import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
@@ -9,7 +10,6 @@ import { auth } from '../../src/firebaseConfig';
 
 // Define las URLs de tus APIs
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
-const LOGIN_EMPRESA_URL = `${API_URL}/api/empresa/login`;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
 
 // Componente Footer para QRONNOS
@@ -51,69 +51,94 @@ export default function HomeScreen() {
     }
 
     async function handleLogin() {
-        console.log("Login function called");
-        console.log("Email:", email);
-        console.log("Password:", password)
-        
-        try {
-            // 1. AUTENTICACIÓN FIREBASE
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            
-            await reload(user); 
-            
-            if (!user.emailVerified) {
-                Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
-                return;
-            }
-
-            // 2. LLAMADA AL BACKEND
-            const response = await fetch(LOGIN_CLIENTE_URL,{
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email, password: password }),
-            });
+    console.log("Login function called");
+    console.log("Email:", email);
     
-            const data = await response.json();
-            if(response.ok && data.code === 200) {
-                Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
-                
-                const nombreCliente = data.cliente
-                const nombreEmpresa = data.empresa
-                const userId = data.token; 
-                const empresaId = data.token_empresa;
-                const jwt = data.jwt;
-                const rol = data.rol;
+    try {
+        // --- 1. OBTENER EL PUSH TOKEN (ANTES DE TODO) ---
+        let expoToken = null;
+        try {
+            const projectId = process.env.EXPO_PUBLIC_PROJECT_ID; 
+            if (projectId) {
+                const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+                expoToken = tokenData.data;
+                console.log("Push Token generado:", expoToken);
+            }
+        } catch (e) {
+            console.log("Error al obtener token de notificaciones:", e);
+            // No bloqueamos el login si el token falla
+        }
 
-                if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
+        // --- 2. AUTENTICACIÓN FIREBASE ---
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        await reload(user); 
+        
+        if (!user.emailVerified) {
+            Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
+            return;
+        }
 
-                if(rol) await SecureStore.setItemAsync('rol', String(rol));
+        if(!expoToken){
+            await SecureStore.getItemAsync('expoPushToken').then(token => {
+                expoToken = token;
+            });
+            console.log("Usando token almacenado:", expoToken);
+            // console.log("No se obtuvo el Push Token, pero se continúa con el login.");
+        }
 
-                if (userId) {
-                    await SecureStore.setItemAsync('user_id', String(userId));
-                    await SecureStore.setItemAsync('nameCliente',String(nombreCliente))
-                }
+        // --- 3. LLAMADA AL BACKEND (Incluimos pushToken en el body) ---
+        const response = await fetch(LOGIN_CLIENTE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: email, 
+                password: password,
+                pushToken: expoToken // <--- Enviamos el token aquí
+            }),
+        });
 
-                if(empresaId){
-                    await SecureStore.setItemAsync('empresa_id',String(empresaId))
-                    await SecureStore.setItemAsync('nameEmpresa',String(nombreEmpresa))
-                }
-
-                router.replace('/(tabs)/dashboard'); 
+        const data = await response.json();
+        
+        if(response.ok && data.code === 200) {
+            Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
             
-            } else {
-                Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
+            const nombreCliente = data.cliente;
+            const nombreEmpresa = data.empresa;
+            const userId = data.token; 
+            const empresaId = data.token_empresa;
+            const jwt = data.jwt;
+            const rol = data.rol;
+
+            if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
+            if (rol) await SecureStore.setItemAsync('rol', String(rol));
+
+            if (userId) {
+                await SecureStore.setItemAsync('user_id', String(userId));
+                await SecureStore.setItemAsync('nameCliente', String(nombreCliente));
             }
 
-        } catch (error: any) {
-            console.error("Error en el login:", error);
-            let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-                errorMessage = "Correo o contraseña incorrecta.";
-            } 
-            Alert.alert("Error de Inicio de Sesión", errorMessage);
+            if(empresaId){
+                await SecureStore.setItemAsync('empresa_id', String(empresaId));
+                await SecureStore.setItemAsync('nameEmpresa', String(nombreEmpresa));
+            }
+
+            router.replace('/(tabs)/dashboard'); 
+        
+        } else {
+            Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
         }
+
+    } catch (error: any) {
+        console.error("Error en el login:", error);
+        let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            errorMessage = "Correo o contraseña incorrecta.";
+        } 
+        Alert.alert("Error de Inicio de Sesión", errorMessage);
     }
+}
 
     return (
         <View style={styles.fullContainer}>

@@ -12,7 +12,10 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.sebas.qronos",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#E6F4FE"
       },
       "edgeToEdgeEnabled": true,
@@ -22,13 +25,18 @@
       "output": "static"
     },
     "plugins": [
+      [
+      "expo-camera",
+        {
+          "cameraPermission": "Permite $(PRODUCT_NAME) acceder a la cámara para escanear códigos QR.",
+          "microphonePermission": "Permite $(PRODUCT_NAME) grabar audio al capturar videos.",
+          "recordAudioAndroid": true
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
             "backgroundColor": "#000000"
@@ -40,13 +48,20 @@
         "expo-secure-store",
         {
           "configureAndroidBackup": true,
-          "faceIDPermission": "Allow $(PRODUCT_NAME) to access your Face ID biometric data."
+          "faceIDPermission": "Permita usar Face ID por Qronos para mayor seguridad."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "60bafa47-7ad8-4d14-b6c8-9b05333a55f7"
+      }
+    },
+    "owner": "qronos"
   }
 }

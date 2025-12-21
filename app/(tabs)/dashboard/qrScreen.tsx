@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
-import { Button, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function QRScreen() {
@@ -42,9 +42,11 @@ export default function QRScreen() {
     if (!permission.granted) {
         // Permisos denegados
         return (
-          <View >
-            <Text style={{ textAlign: 'center' }}>Necesitamos permiso para acceder a la cámara.</Text>
-            <Button onPress={requestPermission} title="Otorgar Permiso" />
+          <View style={{paddingTop:Insents.top}}>
+            <Text style={{ textAlign: 'center',marginTop:'50%' }}>Necesitamos permiso para acceder a la cámara.</Text>
+            <TouchableOpacity onPress={requestPermission} >
+              <Text style={{color:'#000b76',textAlign:'center',marginTop:10}}>Conceder permiso</Text>
+            </TouchableOpacity>
           </View>
         );
     }

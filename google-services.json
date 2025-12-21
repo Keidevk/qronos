@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "351993275036",
+    "project_id": "keidev",
+    "storage_bucket": "keidev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:351993275036:android:b487992f10a157e8ffc359",
+        "android_client_info": {
+          "package_name": "com.sebas.qronos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAV9bfadu_0CzW7ri8tff39GOUkLO7DfDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
