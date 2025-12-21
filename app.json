@@ -26,7 +26,7 @@
     },
     "plugins": [
       [
-      "expo-camera",
+        "expo-camera",
         {
           "cameraPermission": "Permite $(PRODUCT_NAME) acceder a la cámara para escanear códigos QR.",
           "microphonePermission": "Permite $(PRODUCT_NAME) grabar audio al capturar videos.",
@@ -50,7 +50,8 @@
           "configureAndroidBackup": true,
           "faceIDPermission": "Permita usar Face ID por Qronos para mayor seguridad."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
