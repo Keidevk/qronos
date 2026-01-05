@@ -2,17 +2,26 @@ import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
-import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 // Importaciones de Firebase Auth
 import { reload, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../src/firebaseConfig';
 
-// Define las URLs de tus APIs
+// PALETA DE COLORES QRONNOS (Igual al Dashboard)
+const COLORS = {
+  background: '#1a1e29', // Fondo Principal
+  cardBg: '#132d46',     // Fondo de Inputs
+  accent: '#01c38e',     // Neón Mint
+  text: '#ffffff',       // Blanco
+  textSec: '#b0b3b8',    // Gris
+  border: '#2a3b55'      // Bordes
+};
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
 
-// Componente Footer para QRONNOS
+// Componente Footer para QRONNOS (Estilo Dark/Neon)
 const QronnosFooter = () => (
     <View style={styles.footerContainer}>
         <Text style={styles.footerText}>QRONNOS</Text>
@@ -21,8 +30,7 @@ const QronnosFooter = () => (
 
 export default function HomeScreen() {
     const safeareaInsets = useSafeAreaInsets();
-    const fondo = require('../../assets/images/wave.png');
-    const router = useRouter() 
+    const router = useRouter();
     
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -51,259 +59,239 @@ export default function HomeScreen() {
     }
 
     async function handleLogin() {
-    console.log("Login function called");
-    console.log("Email:", email);
-    
-    try {
-        // --- 1. OBTENER EL PUSH TOKEN (ANTES DE TODO) ---
-        let expoToken = null;
+        console.log("Login function called");
+        console.log("Email:", email);
+        
         try {
-            const projectId = process.env.EXPO_PUBLIC_PROJECT_ID; 
-            if (projectId) {
-                const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-                expoToken = tokenData.data;
-                console.log("Push Token generado:", expoToken);
+            let expoToken = null;
+            try {
+                const projectId = process.env.EXPO_PUBLIC_PROJECT_ID; 
+                if (projectId) {
+                    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+                    expoToken = tokenData.data;
+                    console.log("Push Token generado:", expoToken);
+                }
+            } catch (e) {
+                console.log("Error al obtener token de notificaciones:", e);
             }
-        } catch (e) {
-            console.log("Error al obtener token de notificaciones:", e);
-            // No bloqueamos el login si el token falla
-        }
 
-        // --- 2. AUTENTICACIÓN FIREBASE ---
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        await reload(user); 
-        
-        if (!user.emailVerified) {
-            Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
-            return;
-        }
-
-        if(!expoToken){
-            await SecureStore.getItemAsync('expoPushToken').then(token => {
-                expoToken = token;
-            });
-            console.log("Usando token almacenado:", expoToken);
-            // console.log("No se obtuvo el Push Token, pero se continúa con el login.");
-        }
-
-        // --- 3. LLAMADA AL BACKEND (Incluimos pushToken en el body) ---
-        const response = await fetch(LOGIN_CLIENTE_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                email: email, 
-                password: password,
-                pushToken: expoToken // <--- Enviamos el token aquí
-            }),
-        });
-
-        const data = await response.json();
-        
-        if(response.ok && data.code === 200) {
-            Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            await reload(user); 
             
-            const nombreCliente = data.cliente;
-            const nombreEmpresa = data.empresa;
-            const userId = data.token; 
-            const empresaId = data.token_empresa;
-            const jwt = data.jwt;
-            const rol = data.rol;
-
-            if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
-            if (rol) await SecureStore.setItemAsync('rol', String(rol));
-
-            if (userId) {
-                await SecureStore.setItemAsync('user_id', String(userId));
-                await SecureStore.setItemAsync('nameCliente', String(nombreCliente));
+            if (!user.emailVerified) {
+                Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
+                return;
             }
 
-            if(empresaId){
-                await SecureStore.setItemAsync('empresa_id', String(empresaId));
-                await SecureStore.setItemAsync('nameEmpresa', String(nombreEmpresa));
+            if(!expoToken){
+                await SecureStore.getItemAsync('expoPushToken').then(token => {
+                    expoToken = token;
+                });
+                console.log("Usando token almacenado:", expoToken);
             }
 
-            router.replace('/(tabs)/dashboard'); 
-        
-        } else {
-            Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
+            const response = await fetch(LOGIN_CLIENTE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email: email, 
+                    password: password,
+                    pushToken: expoToken 
+                }),
+            });
+
+            const data = await response.json();
+            
+            if(response.ok && data.code === 200) {
+                Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
+                
+                const nombreCliente = data.cliente;
+                const nombreEmpresa = data.empresa;
+                const userId = data.token; 
+                const empresaId = data.token_empresa;
+                const jwt = data.jwt;
+                const rol = data.rol;
+
+                if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
+                if (rol) await SecureStore.setItemAsync('rol', String(rol));
+
+                if (userId) {
+                    await SecureStore.setItemAsync('user_id', String(userId));
+                    await SecureStore.setItemAsync('nameCliente', String(nombreCliente));
+                }
+
+                if(empresaId){
+                    await SecureStore.setItemAsync('empresa_id', String(empresaId));
+                    await SecureStore.setItemAsync('nameEmpresa', String(nombreEmpresa));
+                }
+
+                router.replace('/(tabs)/dashboard'); 
+            
+            } else {
+                Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
+            }
+
+        } catch (error: any) {
+            console.error("Error en el login:", error);
+            let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                errorMessage = "Correo o contraseña incorrecta.";
+            } 
+            Alert.alert("Error de Inicio de Sesión", errorMessage);
         }
-
-    } catch (error: any) {
-        console.error("Error en el login:", error);
-        let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            errorMessage = "Correo o contraseña incorrecta.";
-        } 
-        Alert.alert("Error de Inicio de Sesión", errorMessage);
     }
-}
 
     return (
         <View style={styles.fullContainer}>
-           <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            
+            <View style={{ paddingTop: safeareaInsets.top + 60, ...styles.containerLogin }}>
                 
-                <Text style={styles.Titulo}>Inicia Sesión</Text>
+                <Text style={styles.Titulo}>INICIAR <Text style={{color: COLORS.accent}}>SESIÓN</Text></Text>
+                <Text style={styles.Subtitulo}>Ingresa tus credenciales para continuar</Text>
                 
-                {/* Caja de Email con Sombra */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Correo Electrónico"
-                        placeholderTextColor="#7D7D7D" 
-                        style={styles.TextInput}
-                        value={email} 
-                        onChangeText={setEmail} 
-                        keyboardType="email-address" 
-                        autoCapitalize="none"
-                    /> 
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+                    <View style={styles.inputShadowContainer}>
+                        <TextInput
+                            placeholder="ejemplo@qronnos.com"
+                            placeholderTextColor={COLORS.textSec} 
+                            style={styles.TextInput}
+                            value={email} 
+                            onChangeText={setEmail} 
+                            keyboardType="email-address" 
+                            autoCapitalize="none"
+                        /> 
+                    </View>
                 </View>
                 
-                {/* Caja de Password con Sombra */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Contraseña"
-                        placeholderTextColor="#7D7D7D" 
-                        style={styles.TextInput}
-                        value={password} 
-                        onChangeText={setPassword} 
-                        secureTextEntry={true} 
-                    /> 
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>CONTRASEÑA</Text>
+                    <View style={styles.inputShadowContainer}>
+                        <TextInput
+                            placeholder="********"
+                            placeholderTextColor={COLORS.textSec} 
+                            style={styles.TextInput}
+                            value={password} 
+                            onChangeText={setPassword} 
+                            secureTextEntry={true} 
+                        /> 
+                    </View>
                 </View>
                 
                 <TouchableOpacity onPress={navigateToRegister}>
-                    <Text style={styles.textRegister}>¿Aún no tienes cuenta? <Text style={{fontWeight: 'bold', color: '#000b76'}}>Regístrate</Text></Text>
+                    <Text style={styles.textRegister}>
+                        ¿Aún no tienes cuenta? <Text style={{fontWeight: 'bold', color: COLORS.accent}}>Regístrate</Text>
+                    </Text>
                 </TouchableOpacity>
                 
-                {/* Botón con Sombra Levantada */}
                 <TouchableOpacity onPress={handleLogin} style={styles.button}>
                     <Text style={styles.textButton}>INGRESAR</Text>
                 </TouchableOpacity>
 
-           </View>
-           
-           <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
-           
-           {/* Cartel QRONNOS */}
-           <QronnosFooter />
+            </View>
+            
+            <QronnosFooter />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     fullContainer: {
-        backgroundColor: '#ffffff',
+        backgroundColor: COLORS.background,
         flex: 1,
+    },
+    containerLogin: {
+        paddingHorizontal: 30, 
     },
     Titulo: {
         fontSize: 32,
-        fontWeight: '800', 
-        color: '#000b76', 
+        fontWeight: '900', 
+        color: COLORS.text, 
         textAlign: 'center',
-        marginBottom: 30,
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
-    containerLogin: {
-        marginTop: "35%", 
-        paddingHorizontal: 30, 
+    Subtitulo: {
+        fontSize: 14,
+        color: COLORS.textSec,
+        textAlign: 'center',
+        marginTop: 8,
+        marginBottom: 40,
     },
-    
-    // ESTILO DE SOMBRA LEVANTADA PARA INPUTS
-    inputShadowContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
+    inputWrapper: {
         marginBottom: 20,
+    },
+    label: {
+        color: COLORS.accent,
+        fontSize: 12,
+        fontWeight: '800',
+        marginBottom: 8,
+        marginLeft: 5,
+        letterSpacing: 1,
+    },
+    inputShadowContainer: {
+        backgroundColor: COLORS.cardBg,
+        borderRadius: 12,
         width: "100%",
         height: 55,
         justifyContent: 'center',
-        
-        // Sombra iOS
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-        
-        // Sombra Android (Elevation)
-        elevation: 8, 
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     TextInput: {
         flex: 1,
         paddingHorizontal: 20,
         fontSize: 16,
-        color: '#333333',
-        borderRadius: 15, 
+        color: COLORS.text,
     },
-
     textRegister: {
         marginTop: 10,
         textAlign: 'center',
-        color: '#666',
+        color: COLORS.textSec,
         fontSize: 14,
     },
-
-    // ESTILO DE BOTÓN CON SOMBRA LEVANTADA
     button: {
-        backgroundColor: "#000b76",
+        backgroundColor: COLORS.accent,
         width: "100%", 
         height: 60, 
-        marginTop: 30,
-        borderRadius: 15,
+        marginTop: 35,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 40, // Espacio antes de llegar al borde inferior/footer
-
-        // Sombra iOS
-        shadowColor: "#000b76", 
-        shadowOffset: {
-            width: 0,
-            height: 8,
-        },
+        // Efecto Glow Neon
+        shadowColor: COLORS.accent,
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
-        shadowRadius: 8,
-
-        // Sombra Android
-        elevation: 10,
+        shadowRadius: 10,
+        elevation: 8,
     },
     textButton: {
-        textAlign: "center",
-        color: "#ffffff",
-        fontSize: 18,
-        fontWeight: 'bold',
-        letterSpacing: 1,
+        color: "#000",
+        fontSize: 16,
+        fontWeight: '900',
+        letterSpacing: 1.5,
     },
-
-    background: {
-        backgroundColor: '#ffffff',
-        flex: 1,
-        zIndex: -1,
-        position: 'absolute',
-        top: "60%", // Ajustado para el footer
-        width: '100%',
-        height: '100%',
-        opacity: 0.8,
-    },
-    
-    // 🔥 ESTILOS PARA EL CARTEL QRONNOS (Efecto Neón)
     footerContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: 70, // Altura del cartel
-        backgroundColor: '#000b76', // Fondo azul oscuro
+        height: 80,
+        backgroundColor: COLORS.background,
         justifyContent: 'center',
         alignItems: 'center',
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
     },
     footerText: {
-        fontSize: 35,
+        fontSize: 28,
         fontWeight: '900',
-        color: '#FFFFFF', // Texto en blanco brillante
-        letterSpacing: 8,
-        textShadowColor: 'rgba(45, 156, 219, 0.9)', // Sombra azul brillante para el efecto neón
+        color: COLORS.accent,
+        letterSpacing: 12,
+        opacity: 0.8,
+        textShadowColor: COLORS.accent,
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10, 
+        textShadowRadius: 8, 
     }
 });

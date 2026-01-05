@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 // Iconos para el botón de regresar
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,16 @@ import { Ionicons } from '@expo/vector-icons';
 // Importaciones de Firebase Auth
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../../src/firebaseConfig.js';
+
+// PALETA DE COLORES QRONNOS
+const COLORS = {
+  background: '#1a1e29', 
+  cardBg: '#132d46',     
+  accent: '#01c38e',     
+  text: '#ffffff',       
+  textSec: '#b0b3b8',    
+  border: '#2a3b55'      
+};
 
 // Componente Footer para QRONNOS
 const QronnosFooter = () => (
@@ -18,7 +28,6 @@ const QronnosFooter = () => (
 
 export default function Register() {
     const safeareaInsets = useSafeAreaInsets();
-    const fondo = require('../../../assets/images/wave.png');
     const router = useRouter();
 
     const [nombreCompleto, setNombreComplepto] = useState("");
@@ -29,17 +38,14 @@ export default function Register() {
         console.log("Register function called");
 
         try {
-            // 1. CREAR EL USUARIO EN FIREBASE AUTH
             const userCredential = await createUserWithEmailAndPassword(auth, correo, contrasena);
             const user = userCredential.user;
             const firebase_uid = user.uid; 
 
-            // 2. ENVIAR EL CORREO DE VERIFICACIÓN
             await sendEmailVerification(user);
 
             console.log("Usuario de Firebase creado con UID:", firebase_uid);
 
-            // 3. LLAMADA A TU BACKEND
             const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/cliente/`, {
                 method: 'POST',
                 headers: {
@@ -55,7 +61,6 @@ export default function Register() {
 
             const data = await response.json();
 
-            // 4. VERIFICACIÓN DEL BACKEND
             if (response.status !== 201) {
                 Alert.alert(`Error ${response.status}`, `El perfil no se creó en la base de datos: ${data.message}`);
                 return;
@@ -63,9 +68,9 @@ export default function Register() {
                 console.log("Respuesta del servidor:", data);
                 Alert.alert(
                     "Registro Exitoso", 
-                    "¡Te has registrado! Revisa tu correo para **verificar tu cuenta** antes de iniciar sesión."
+                    "¡Te has registrado! Revisa tu correo para verificar tu cuenta antes de iniciar sesión."
                 );
-                router.replace('../../index'); // Redirigir al inicio o a la pantalla de login
+                router.replace('../../index'); 
             }
 
         } catch (error: any) {
@@ -82,51 +87,62 @@ export default function Register() {
 
     return (
         <View style={styles.fullScreenContainer}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
             
             {/* Cabecera con Botón Regresar */}
-            <View style={{ paddingTop: safeareaInsets.top + 10, paddingHorizontal: 20 }}>
+            <View style={{ paddingTop: safeareaInsets.top + 20, paddingHorizontal: 25 }}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={28} color="#000b76" />
+                    <Ionicons name="arrow-back" size={28} color={COLORS.accent} />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.containerLogin}>
-                <Text style={styles.Titulo}>Crear Cuenta</Text>
+                <Text style={styles.Titulo}>CREAR <Text style={{color: COLORS.accent}}>CUENTA</Text></Text>
+                <Text style={styles.Subtitulo}>Únete al ecosistema tecnológico QRONNOS</Text>
                 
                 {/* Nombre Completo */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Nombre Completo"
-                        placeholderTextColor="#7D7D7D"
-                        style={styles.TextInput}
-                        value={nombreCompleto}
-                        onChangeText={setNombreComplepto}
-                    />
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>NOMBRE COMPLETO</Text>
+                    <View style={styles.inputShadowContainer}>
+                        <TextInput
+                            placeholder="Tu nombre y apellido"
+                            placeholderTextColor={COLORS.textSec}
+                            style={styles.TextInput}
+                            value={nombreCompleto}
+                            onChangeText={setNombreComplepto}
+                        />
+                    </View>
                 </View>
                 
                 {/* Correo */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Correo Electrónico"
-                        placeholderTextColor="#7D7D7D"
-                        style={styles.TextInput}
-                        value={correo}
-                        onChangeText={setCorreo}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                    />
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+                    <View style={styles.inputShadowContainer}>
+                        <TextInput
+                            placeholder="ejemplo@qronnos.com"
+                            placeholderTextColor={COLORS.textSec}
+                            style={styles.TextInput}
+                            value={correo}
+                            onChangeText={setCorreo}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
+                    </View>
                 </View>
                 
                 {/* Contraseña */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Contraseña"
-                        placeholderTextColor="#7D7D7D"
-                        secureTextEntry={true}
-                        style={styles.TextInput}
-                        value={contrasena}
-                        onChangeText={setContrasena}
-                    />
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>CONTRASEÑA</Text>
+                    <View style={styles.inputShadowContainer}>
+                        <TextInput
+                            placeholder="********"
+                            placeholderTextColor={COLORS.textSec}
+                            secureTextEntry={true}
+                            style={styles.TextInput}
+                            value={contrasena}
+                            onChangeText={setContrasena}
+                        />
+                    </View>
                 </View>
                 
                 <TouchableOpacity onPress={handleRegister} style={styles.button}>
@@ -134,10 +150,6 @@ export default function Register() {
                 </TouchableOpacity>
             </View>
             
-            {/* Imagen de Fondo (Ajustada para dejar espacio) */}
-            <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
-
-            {/* Cartel QRONNOS */}
             <QronnosFooter />
         </View>
     );
@@ -145,115 +157,103 @@ export default function Register() {
 
 const styles = StyleSheet.create({
     fullScreenContainer: {
-        backgroundColor: '#ffffff',
+        backgroundColor: COLORS.background,
         flex: 1,
     },
-    
-    // Botón de regreso
     backButton: {
-        width: 40,
-        height: 40,
+        width: 45,
+        height: 45,
         justifyContent: 'center',
-        alignItems: 'flex-start',
-        zIndex: 10,
+        alignItems: 'center',
+        borderRadius: 12,
+        backgroundColor: COLORS.cardBg,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
-
     containerLogin: {
-        marginTop: "10%", 
+        marginTop: 20, 
         paddingHorizontal: 30,
-        // Usamos flex: 1 en el contenedor principal, así que este ya no necesita definir altura.
     },
-
     Titulo: {
         fontSize: 32,
-        fontWeight: '800',
-        color: '#000b76',
+        fontWeight: '900',
+        color: COLORS.text,
         textAlign: 'center',
-        marginBottom: 30,
-        letterSpacing: 0.5,
+        letterSpacing: 1,
     },
-
-    // ESTILO DE SOMBRA
+    Subtitulo: {
+        fontSize: 14,
+        color: COLORS.textSec,
+        textAlign: 'center',
+        marginTop: 8,
+        marginBottom: 35,
+    },
+    inputWrapper: {
+        marginBottom: 15,
+    },
+    label: {
+        color: COLORS.accent,
+        fontSize: 11,
+        fontWeight: '800',
+        marginBottom: 8,
+        marginLeft: 5,
+        letterSpacing: 1,
+    },
     inputShadowContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
-        marginBottom: 20,
+        backgroundColor: COLORS.cardBg,
+        borderRadius: 12,
         width: "100%",
         height: 55,
         justifyContent: 'center',
-        
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-        
-        elevation: 8, 
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
-
     TextInput: {
         flex: 1,
         paddingHorizontal: 20,
         fontSize: 16,
-        color: '#333333',
-        borderRadius: 15,
+        color: COLORS.text,
     },
-
-    // BOTÓN CON SOMBRA
     button: {
-        backgroundColor: "#000b76",
+        backgroundColor: COLORS.accent,
         width: "100%",
         height: 60,
         marginTop: 30,
-        borderRadius: 15,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-
-        shadowColor: "#000b76",
-        shadowOffset: { width: 0, height: 8 },
+        shadowColor: COLORS.accent,
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
-        shadowRadius: 8,
-
-        elevation: 10,
-        marginBottom: 40, // Espacio antes de llegar al borde inferior/footer
+        shadowRadius: 10,
+        elevation: 8,
     },
-    
     textButton: {
-        textAlign: "center",
-        color: "#ffffff",
-        fontSize: 18,
-        fontWeight: 'bold',
-        letterSpacing: 1,
+        color: "#000",
+        fontSize: 16,
+        fontWeight: '900',
+        letterSpacing: 1.5,
     },
-
-    // Imagen de fondo: Ajustada para no superponer el footer
-    background: {
-        backgroundColor: '#ffffff',
-        zIndex: -1,
-        position: 'absolute',
-        top: "60%", 
-        width: '100%',
-        height: '100%',
-        opacity: 0.7,
-    },
-
-    // 🔥 ESTILOS PARA EL CARTEL QRONNOS (Efecto Neón)
     footerContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: 70, // Altura del cartel
-        backgroundColor: '#000b76', // Fondo azul oscuro o el mismo del botón
+        height: 80,
+        backgroundColor: COLORS.background,
         justifyContent: 'center',
         alignItems: 'center',
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
     },
     footerText: {
-        fontSize: 35,
+        fontSize: 28,
         fontWeight: '900',
-        color: '#FFFFFF', // Texto en blanco brillante
-        letterSpacing: 8,
-        textShadowColor: 'rgba(45, 156, 219, 0.9)', // Sombra azul brillante para el efecto neón
+        color: COLORS.accent,
+        letterSpacing: 12,
+        opacity: 0.8,
+        textShadowColor: COLORS.accent,
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10, 
+        textShadowRadius: 8, 
     }
 });

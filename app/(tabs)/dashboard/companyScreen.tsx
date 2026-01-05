@@ -1,13 +1,19 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+import { ActivityIndicator, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-/**
- * Hook que valida acceso según:
- * - empresa_id → autorizado
- * - user_id sin empresa_id → acceso NO autorizado
- */
+// --- PALETA QRONNOS ---
+const COLORS = {
+  background: '#1a1e29',
+  cardBg: '#132d46',
+  accent: '#01c38e',
+  text: '#ffffff',
+  textSec: '#b0b3b8',
+  border: '#2a3b55'
+};
+
 const useEmpresaCheck = () => {
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -49,13 +55,10 @@ const useEmpresaCheck = () => {
 export default function CompanyScreen() {
     const navigator = useNavigation();
     const { isAuthorized, isLoading, errorMessage } = useEmpresaCheck();
-    const scheme = useColorScheme();
-    const dark = scheme === "dark";
 
     const [totalScans, setTotalScans] = useState<number | null>(null);
     const [totalPoints, setTotalPoints] = useState<number | null>(null);
 
-    // Traer métricas de la empresa
     useEffect(() => {
         const fetchMetrics = async () => {
             try {
@@ -63,20 +66,15 @@ export default function CompanyScreen() {
                 if (!empresaId) return;
 
                 const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/metricas/empresa/${empresaId}`);
-                
-                // Corrección: El backend devuelve un array directo []
                 const metricas = await response.json();
 
                 if (Array.isArray(metricas)) {
-                    // Sumar todas las vecesScan (convertido a Number por seguridad)
                     const scans = metricas.reduce((acc: number, m: any) => acc + (Number(m.vecesScan) || 0), 0);
                     setTotalScans(scans);
 
-                    // Sumar todos los puntos (convertido a Number por seguridad)
                     const points = metricas.reduce((acc: number, m: any) => acc + (Number(m.puntos) || 0), 0);
                     setTotalPoints(points);
                 } else {
-                    // En caso de que no sea un array o venga vacío
                     setTotalScans(0);
                     setTotalPoints(0);
                 }
@@ -92,7 +90,7 @@ export default function CompanyScreen() {
     if (isLoading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#fff" />
+                <ActivityIndicator size="large" color={COLORS.accent} />
                 <Text style={[styles.subText, { marginTop: 15 }]}>Verificando acceso...</Text>
             </View>
         );
@@ -101,7 +99,8 @@ export default function CompanyScreen() {
     if (!isAuthorized) {
         return (
             <View style={styles.centerContainer}>
-                <Text style={styles.textBase}>🚫 Acceso Denegado</Text>
+                <Ionicons name="lock-closed-outline" size={60} color={COLORS.accent} style={{marginBottom: 20}} />
+                <Text style={styles.textBase}>Acceso Denegado</Text>
                 <Text style={styles.subText}>
                     {errorMessage || "No tienes permisos para acceder a este módulo."}
                 </Text>
@@ -110,90 +109,119 @@ export default function CompanyScreen() {
     }
 
     return (
-        <View style={[styles.companyContainer, { backgroundColor: dark ? "#0D0D0D" : "#F3F4F6" }]}>
+        <View style={styles.companyContainer}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            
             <TouchableOpacity 
                 onPress={() => (navigator as any).openDrawer()}
                 style={{ position: "absolute", top: 50, right: 20, zIndex: 20 }}
             >
-                <Text style={{ fontSize: 30, color: dark ? "#fff" : "#000" }}>☰</Text>
+                <Ionicons name="menu" size={32} color={COLORS.accent} />
             </TouchableOpacity>
 
-            <Text style={[styles.header, { top: 40, color: dark ? "#FFFFFF" : "#1F2937" }]}>
-                Panel de Empresa
+            <Text style={styles.header}>
+                PANEL DE <Text style={{color: COLORS.accent}}>EMPRESA</Text>
             </Text>
 
-            <View style={{ marginTop: 150 }}>
+            <View style={{ marginTop: 60 }}>
                 {/* Visualización de Puntos */}
-                <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1, marginBottom: 15 }]}>
-                    <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
-                        Total de puntos otorgados
-                    </Text>
-                    <Text style={[styles.scanNumber, { color: "#10B981" }]}>
-                        {totalPoints !== null ? totalPoints : "Cargando..."}
-                    </Text>
+                <View style={styles.card}>
+                    <View style={styles.iconCircle}>
+                         <Ionicons name="gift-outline" size={24} color={COLORS.accent} />
+                    </View>
+                    <View>
+                        <Text style={styles.smallTitle}>Total de puntos otorgados</Text>
+                        <Text style={[styles.scanNumber, { color: COLORS.accent }]}>
+                            {totalPoints !== null ? totalPoints : "..."}
+                        </Text>
+                    </View>
                 </View>
 
                 {/* Visualización de Escaneos */}
-                <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1 }]}>
-                    <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
-                        Total de escaneos
-                    </Text>
-                    <Text style={[styles.scanNumber, { color: dark ? "#4F9CF9" : "#2563EB" }]}>
-                        {totalScans !== null ? totalScans : "Cargando..."}
-                    </Text>
+                <View style={styles.card}>
+                    <View style={[styles.iconCircle, { borderColor: '#4F9CF9', backgroundColor: 'rgba(79, 156, 249, 0.1)' }]}>
+                         <Ionicons name="qr-code-outline" size={24} color="#4F9CF9" />
+                    </View>
+                    <View>
+                        <Text style={styles.smallTitle}>Total de escaneos</Text>
+                        <Text style={[styles.scanNumber, { color: '#4F9CF9' }]}>
+                            {totalScans !== null ? totalScans : "..."}
+                        </Text>
+                    </View>
                 </View>
             </View>
         </View>
     );
 }
 
-/* ------------------ ESTILOS ------------------ */
 const styles = StyleSheet.create({
     centerContainer: {
         flex: 1, 
-        backgroundColor: '#000', 
+        backgroundColor: COLORS.background, 
         justifyContent: 'center', 
         alignItems: 'center', 
         padding: 20 
     },
     textBase: {
-         color: '#fff', 
+         color: COLORS.text, 
          fontSize: 22, 
          fontWeight: 'bold', 
          marginBottom: 10 
     },
     subText: { 
-        color: '#aaa', 
+        color: COLORS.textSec, 
         fontSize: 16, 
         textAlign: 'center' 
     },
     companyContainer: {
          flex: 1, 
          padding: 20,
+         backgroundColor: COLORS.background
     },
     header: { 
-        fontSize: 26, 
-        fontWeight: "bold", 
-        marginBottom: 20, 
-        marginTop: 40, 
-        textAlign: "center" 
+        fontSize: 24, 
+        fontWeight: "900", 
+        color: COLORS.text,
+        marginTop: 60, 
+        textAlign: "left",
+        letterSpacing: 1
     },
     card: { 
-        backgroundColor: "#fff", 
-        padding: 18, 
+        backgroundColor: COLORS.cardBg, 
+        padding: 25, 
         borderRadius: 20, 
         shadowColor: "#000", 
-        shadowOpacity: 0.1, 
-        shadowRadius: 8, 
-        elevation: 4, 
-        marginBottom: 25,
+        shadowOpacity: 0.3, 
+        shadowRadius: 10, 
+        shadowOffset: {width: 0, height: 5},
+        elevation: 6, 
+        marginBottom: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border
+    },
+    iconCircle: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        borderWidth: 1,
+        borderColor: COLORS.accent,
+        backgroundColor: 'rgba(1, 195, 142, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 20
     },
     smallTitle: { 
-        fontSize: 16 
+        fontSize: 14,
+        color: COLORS.textSec,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5
     },
     scanNumber: { 
-        fontSize: 42, 
+        fontSize: 36, 
         fontWeight: "bold", 
-        marginTop: 3 
+        marginTop: 2 
     },
 });
