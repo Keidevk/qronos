@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font'; // Importante para las fuentes
 import { useFocusEffect, useNavigation } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from "react";
@@ -17,11 +18,20 @@ const { width } = Dimensions.get('window');
 
 // --- PALETA QRONNOS ---
 const COLORS = {
-  background: '#1a1e29',
-  cardBg: '#132d46',
+  background: '#0f1115', // Ajustado al Dashboard
+  cardBg: '#181b21',     // Ajustado al Dashboard
   accent: '#01c38e',
   text: '#ffffff',
-  textSec: '#b0b3b8',
+  textSec: '#8b9bb4',
+  border: '#232936',
+};
+
+// --- CONSTANTES DE FUENTES ---
+const FONTS = {
+  title: 'Heavitas',
+  textRegular: 'Poppins-Regular',
+  textMedium: 'Poppins-Medium',
+  textBold: 'Poppins-Bold'
 };
 
 export default function ProfileScreen() {
@@ -30,6 +40,14 @@ export default function ProfileScreen() {
   const [qrData, setQrData] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+
+  // Carga de fuentes
+  const [fontsLoaded] = useFonts({
+    'Heavitas': require('../../../assets/fonts/Heavitas.ttf'),
+    'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
+    'Poppins-Medium': require('../../../assets/fonts/Poppins-Medium.ttf'),
+    'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -84,7 +102,7 @@ export default function ProfileScreen() {
     }, [])
   );
 
-  if (isLoading) {
+  if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={COLORS.accent} />
@@ -97,7 +115,7 @@ export default function ProfileScreen() {
     return (
       <View style={styles.centerContainer}>
         <Ionicons name="alert-circle-outline" size={80} color={COLORS.accent} />
-        <Text style={styles.errorTitle}>Sesión Caducada o Error</Text>
+        <Text style={styles.errorTitle}>SESIÓN CADUCADA</Text>
         <Text style={styles.errorSub}>No pudimos generar tu código. Por favor, intenta iniciar sesión de nuevo.</Text>
       </View>
     );
@@ -107,28 +125,35 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
-      {/* HEADER */}
+      {/* HEADER PROFESIONAL */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
-          <Ionicons name="menu" size={28} color={COLORS.accent} />
+          <Ionicons name="grid-outline" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>MI PERFIL</Text>
         <View style={{ width: 40 }} /> 
       </View>
 
       <View style={styles.content}>
-        {/* TARJETA DE PERFIL QRONNOS */}
+        {/* TARJETA DE PERFIL TIPO MEMBRESÍA */}
         <View style={styles.profileCard}>
-          <View style={styles.neonStrip} />
+          <View style={styles.cardHeader}>
+             <Text style={styles.brandName}>QRONNOS</Text>
+             
+          </View>
           
-          <Text style={styles.userName}>{nombreClienteState.toUpperCase() || 'USUARIO'}</Text>
-          <Text style={styles.userLabel}>CLIENTE EXCLUSIVO</Text>
+          <View style={styles.userInfoSection}>
+            <Text style={styles.userName}>{nombreClienteState.toUpperCase() || 'USUARIO'}</Text>
+            <View style={styles.badgeContainer}>
+                <Text style={styles.userLabel}>CLIENTE EXCLUSIVO</Text>
+            </View>
+          </View>
 
-          {/* CONTENEDOR DEL QR */}
+          {/* CONTENEDOR DEL QR REFINADO */}
           <View style={styles.qrWrapper}>
             <QrCodeSvg
               value={qrData} 
-              frameSize={200}
+              frameSize={180}
               contentCells={5}
               backgroundColor="white"
               color="#000"
@@ -136,12 +161,12 @@ export default function ProfileScreen() {
           </View>
           
           <View style={styles.scanHintContainer}>
-            <Ionicons name="scan-outline" size={20} color={COLORS.accent} />
-            <Text style={styles.footerNoteCard}>Escanea para identificarte</Text>
+            <Ionicons name="scan-outline" size={18} color={COLORS.accent} />
+            <Text style={styles.footerNoteCard}>Identificación Digital</Text>
           </View>
         </View>
 
-        <Text style={styles.footerNote}>Presenta este código en el establecimiento</Text>
+        <Text style={styles.footerNote}>Presenta este código en los comercios aliados para recibir tus beneficios.</Text>
       </View>
     </View>
   );
@@ -167,109 +192,136 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBg
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontFamily: FONTS.title,
     color: COLORS.text,
     letterSpacing: 1
   },
   iconButton: {
-    padding: 5,
+    padding: 8,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 12,
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 20,
   },
+  // --- CARD DESIGN ---
   profileCard: {
-    width: width * 0.85,
+    width: width * 0.88,
     backgroundColor: COLORS.cardBg,
-    borderRadius: 24,
-    paddingBottom: 40,
+    borderRadius: 30,
+    padding: 24,
     alignItems: 'center',
-    // Glow effect neon
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)'
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 8,
   },
-  neonStrip: {
+  cardHeader: {
     width: '100%',
-    height: 8,
-    backgroundColor: COLORS.accent,
-    marginBottom: 30,
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 5
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30
+  },
+  brandName: {
+    fontFamily: FONTS.title,
+    color: COLORS.accent,
+    fontSize: 14,
+    letterSpacing: 2
+  },
+  chipDesign: {
+    width: 40,
+    height: 30,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  userInfoSection: {
+    alignItems: 'center',
+    marginBottom: 30
   },
   userName: {
     fontSize: 22,
-    fontWeight: '900',
+    fontFamily: FONTS.title,
     color: COLORS.text,
-    letterSpacing: 0.5,
     textAlign: 'center',
-    paddingHorizontal: 20
+    marginBottom: 8
+  },
+  badgeContainer: {
+    backgroundColor: 'rgba(1, 195, 142, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(1, 195, 142, 0.2)'
   },
   userLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 10,
+    fontFamily: FONTS.textBold,
     color: COLORS.accent,
-    letterSpacing: 2,
-    marginBottom: 30,
-    marginTop: 5,
-    opacity: 0.8
+    letterSpacing: 1,
   },
   qrWrapper: {
-    padding: 15,
+    padding: 12,
     backgroundColor: '#fff',
-    borderRadius: 20,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: COLORS.textSec,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 20,
-    color: COLORS.text
-  },
-  errorSub: {
-    fontSize: 15,
-    textAlign: 'center',
-    color: COLORS.textSec,
-    marginTop: 10,
-    lineHeight: 22
+    borderRadius: 24,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
   },
   scanHintContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 25,
-    opacity: 0.9
+    marginTop: 35,
   },
   footerNoteCard: {
     marginLeft: 8,
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textSec,
-    fontWeight: '600',
+    fontFamily: FONTS.textMedium,
     textTransform: 'uppercase',
+    letterSpacing: 1
+  },
+  // --- OTROS ---
+  loadingText: {
+    marginTop: 15,
+    fontSize: 14,
+    fontFamily: FONTS.textMedium,
+    color: COLORS.textSec,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontFamily: FONTS.title,
+    marginTop: 20,
+    color: COLORS.text
+  },
+  errorSub: {
+    fontSize: 14,
+    fontFamily: FONTS.textRegular,
+    textAlign: 'center',
+    color: COLORS.textSec,
+    marginTop: 10,
+    lineHeight: 22,
+    paddingHorizontal: 20
   },
   footerNote: {
-    marginTop: 30,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.3)',
-    fontWeight: '500'
+    marginTop: 40,
+    fontSize: 13,
+    color: COLORS.textSec,
+    fontFamily: FONTS.textRegular,
+    textAlign: 'center',
+    paddingHorizontal: 50,
+    lineHeight: 20,
+    opacity: 0.6
   }
 });

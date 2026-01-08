@@ -1,19 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useFonts } from 'expo-font'; // IMPORTANTE: Necesario para cargar fuentes personalizadas
 import React, { useMemo, useState } from 'react';
-import { Alert, Dimensions, Image, Linking, Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, Linking, Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
-// --- PALETA DE COLORES QRONNOS ---
+// --- PALETA DE COLORES ---
 const COLORS = {
-  background: '#1a1e29', // Fondo Principal (Dark Navy)
-  cardBg: '#132d46',     // Fondo de Tarjetas (Deep Blue)
-  accent: '#01c38e',     // Acento Principal (Neon Mint)
-  text: '#ffffff',       // Texto Blanco
-  textSec: '#b0b3b8',    // Texto Gris Claro
-  border: '#2a3b55'      // Bordes sutiles
+  background: '#0f1115',
+  cardBg: '#181b21',
+  accent: '#01c38e',
+  text: '#ffffff',
+  textSec: '#8b9bb4',
+  border: '#232936',
+  overlay: 'rgba(0,0,0,0.6)'
+};
+
+// --- DEFINICIÓN DE FUENTES ---
+// Usamos constantes para facilitar cambios futuros
+const FONTS = {
+  // Heavitas suele ser una fuente display gruesa, ideal para logotipos y títulos cortos
+  title: 'Heavitas', 
+  // Poppins para el resto
+  textRegular: 'Poppins-Regular',
+  textMedium: 'Poppins-Medium',
+  textBold: 'Poppins-Bold'
 };
 
 type Category = 'Todos' | 'Restaurantes' | 'Tiendas' | 'Ferreterias' | 'Comida rapida';
@@ -24,7 +37,7 @@ interface Lugar {
   id: number;
   titulo: string;
   descripcion: string;
-  imagen: string;
+  imagen: any; 
   categoria: Category;
   ciudad: string;
   descuentos?: string;
@@ -33,11 +46,21 @@ interface Lugar {
 
 const dataLugares: Lugar[] = [
   {
+    id: 5,
+    titulo: "1533 Restaurante & Bar",
+    descripcion: "Gastronomía histórica y coctelería de autor en el corazón de la ciudad.",
+    imagen: require('../../../assets/images/1533Restaurante.png'), 
+    descuentos: "10% OFF",
+    categoria: 'Restaurantes',
+    ciudad: 'Cartagena',
+    mapLink: "https://maps.app.goo.gl/hvQafnq9fFSZujyu5" 
+  },
+  {
     id: 1,
     titulo: "C.C. San Fernando",
     descripcion: "Cl. 31 #82-267, Provincia de Cartagena, Bolívar, Colombia",
     imagen: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1000&q=80",
-    descuentos: "10% en todas las hamburguesas",
+    descuentos: "10% Hamburguesas",
     categoria: 'Comida rapida',
     ciudad: 'Cartagena',
     mapLink: "https://maps.google.com"
@@ -47,7 +70,7 @@ const dataLugares: Lugar[] = [
     titulo: "La Ferretería Mayor",
     descripcion: "Especialistas en herramientas y construcción.",
     imagen: "https://images.unsplash.com/photo-1581141849291-1125c7b692b5?auto=format&fit=crop&w=1000&q=80",
-    descuentos: "2x1 en alquiler de equipo",
+    descuentos: "2x1 Alquiler",
     categoria: 'Ferreterias',
     ciudad: 'Cartagena',
     mapLink: "https://maps.google.com"
@@ -57,7 +80,7 @@ const dataLugares: Lugar[] = [
     titulo: "Mega Ropa",
     descripcion: "Moda de temporada para toda la familia.",
     imagen: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1000&q=80",
-    descuentos: "30% en prendas seleccionadas",
+    descuentos: "30% Selected",
     categoria: 'Tiendas',
     ciudad: 'Caracas',
     mapLink: "https://maps.google.com"
@@ -68,6 +91,15 @@ export default function HomeScreen() {
   const navigator: any = useNavigation();
   const safeAreaInsets = useSafeAreaInsets();
   
+  // --- CARGA DE FUENTES ---
+  // Asegúrate de que los nombres coincidan con tus archivos en assets/fonts
+  const [fontsLoaded] = useFonts({
+    'Heavitas': require('../../../assets/fonts/Heavitas.ttf'), 
+    'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
+    'Poppins-Medium': require('../../../assets/fonts/Poppins-Medium.ttf'),
+    'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
+  });
+
   const [selectedLugar, setSelectedLugar] = useState<Lugar | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category>('Todos');
@@ -88,88 +120,138 @@ export default function HomeScreen() {
     else Alert.alert("Error", "No se pudo abrir el mapa.");
   };
 
+  const getImageSource = (img: any) => {
+    return typeof img === 'string' ? { uri: img } : img;
+  };
+
+  // Pantalla de carga mientras suben las fuentes
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.container, {justifyContent: 'center', alignItems: 'center'}]}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Cambiamos el StatusBar a light-content para que se vea sobre fondo oscuro */}
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
       {/* HEADER */}
-      <View style={{ paddingTop: safeAreaInsets.top + 10, ...styles.header }}>
-        <TouchableOpacity onPress={() => navigator.openDrawer()}>
-          <Ionicons name="menu" size={32} color={COLORS.accent} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>ECOSISTEMA <Text style={{color: COLORS.accent}}>QRONNOS</Text></Text>
-        <TouchableOpacity>
-           <Ionicons name="notifications-outline" size={28} color={COLORS.text} />
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-        
-        {/* SELECTOR DE CIUDAD */}
-        <View style={styles.dropdownContainer}>
-          <TouchableOpacity 
-            style={[styles.dropdownButton, isCityMenuOpen && styles.activeBorder]} 
-            onPress={() => setIsCityMenuOpen(!isCityMenuOpen)}
-          >
-            <View style={styles.row}>
-              <Ionicons name="location" size={20} color={COLORS.accent} />
-              <Text style={styles.dropdownButtonText}>{selectedCity}</Text>
+      <View style={[styles.header, { paddingTop: safeAreaInsets.top + 10 }]}>
+        <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
+                <Ionicons name="grid-outline" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            
+            <View style={{ alignItems: 'center' }}>
+                {/* Subtítulo en Poppins Bold para contraste */}
+                <Text style={styles.headerSubtitle}>ECOSISTEMA</Text>
+                {/* Título principal en Heavitas */}
+                <Text style={styles.headerTitle}>QRONNOS</Text>
             </View>
-            <Ionicons name={isCityMenuOpen ? "chevron-up" : "chevron-down"} size={20} color={COLORS.accent} />
-          </TouchableOpacity>
 
-          {isCityMenuOpen && (
-            <View style={styles.dropdownList}>
-              {CIUDADES.map((ciudad) => (
-                <TouchableOpacity 
-                  key={ciudad}
-                  style={styles.dropdownItem}
-                  onPress={() => { setSelectedCity(ciudad); setIsCityMenuOpen(false); }}
-                >
-                  <Text style={[styles.dropdownItemText, selectedCity === ciudad && { color: COLORS.accent, fontWeight: 'bold' }]}>{ciudad}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+            <TouchableOpacity style={styles.iconButton}>
+                <Ionicons name="search-outline" size={24} color={COLORS.text} />
+            </TouchableOpacity>
         </View>
 
-        {/* FILTRO CATEGORÍAS */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              onPress={() => setSelectedCategory(cat)}
-              style={[styles.catBtn, selectedCategory === cat && styles.catBtnActive]}
+        {/* SELECTOR DE CIUDAD */}
+        <View style={styles.cityFilterContainer}>
+            <TouchableOpacity 
+                style={styles.citySelectorBtn} 
+                onPress={() => setIsCityMenuOpen(!isCityMenuOpen)}
             >
-              <Text style={[styles.catText, selectedCategory === cat && styles.catTextActive]}>{cat}</Text>
+                <Ionicons name="location-sharp" size={18} color={COLORS.accent} />
+                <Text style={styles.citySelectorText}>
+                    {selectedCity === 'Todas' ? 'Explorar todas las ciudades' : selectedCity}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={COLORS.textSec} />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+        </View>
+      </View>
+      
+      {/* MENÚ FLOTANTE CIUDAD */}
+      {isCityMenuOpen && (
+        <View style={[styles.cityDropdown, { top: safeAreaInsets.top + 115 }]}>
+            {CIUDADES.map((ciudad) => (
+            <TouchableOpacity 
+                key={ciudad}
+                style={styles.cityDropdownItem}
+                onPress={() => { setSelectedCity(ciudad); setIsCityMenuOpen(false); }}
+            >
+                <Text style={[
+                    styles.cityDropdownText, 
+                    selectedCity === ciudad && { color: COLORS.accent, fontFamily: FONTS.textBold }
+                ]}>
+                    {ciudad}
+                </Text>
+                {selectedCity === ciudad && <Ionicons name="checkmark" size={18} color={COLORS.accent}/>}
+            </TouchableOpacity>
+            ))}
+        </View>
+      )}
 
-        {/* LISTADO DE LOCALES */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        
+        {/* TABS CATEGORÍAS */}
+        <View style={styles.categoriesContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+            {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                style={styles.tabItem}
+                >
+                <Text style={[styles.tabText, selectedCategory === cat && styles.tabTextActive]}>
+                    {cat}
+                </Text>
+                {selectedCategory === cat && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+            ))}
+            </ScrollView>
+        </View>
+
+        {/* LISTADO */}
         <View style={styles.listContainer}>
-          <Text style={styles.sectionTitle}>
-            Destacados en <Text style={{color: COLORS.accent}}>{selectedCity}</Text>
+          <Text style={styles.resultsText}>
+            {filteredLugares.length} {filteredLugares.length === 1 ? 'Aliado encontrado' : 'Aliados encontrados'}
           </Text>
           
           {filteredLugares.map((lugar) => (
             <TouchableOpacity 
               key={lugar.id} 
               onPress={() => { setSelectedLugar(lugar); setModalVisible(true); }}
-              style={styles.raisedCard}
+              activeOpacity={0.9}
+              style={styles.proCard}
             >
-              <Image source={{ uri: lugar.imagen }} style={styles.cardImg} />
-              <View style={styles.cardOverlay}>
-                <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{lugar.categoria.toUpperCase()}</Text>
-                </View>
+              <View style={styles.imageContainer}>
+                  <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="cover" />
+                  
+                  {lugar.descuentos && (
+                    <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>{lugar.descuentos}</Text>
+                    </View>
+                  )}
               </View>
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardTitleText}>{lugar.titulo}</Text>
-                <View style={styles.row}>
-                    <Ionicons name="pin" size={14} color={COLORS.accent} />
-                    <Text style={styles.cardSubText}>{lugar.ciudad}</Text>
+              
+              <View style={styles.cardContent}>
+                <View style={styles.cardHeaderRow}>
+                    <Text style={styles.cardCategory}>{lugar.categoria.toUpperCase()}</Text>
+                    <View style={styles.locationRow}>
+                        <Ionicons name="pin-outline" size={14} color={COLORS.textSec} />
+                        <Text style={styles.cardCity}>{lugar.ciudad}</Text>
+                    </View>
+                </View>
+                
+                {/* Título en Heavitas */}
+                <Text style={styles.cardTitle}>{lugar.titulo}</Text>
+                {/* Descripción en Poppins Regular */}
+                <Text style={styles.cardDesc} numberOfLines={1}>{lugar.descripcion}</Text>
+                
+                <View style={styles.cardFooter}>
+                    <Text style={styles.moreInfoText}>Ver detalles</Text>
+                    <Ionicons name="arrow-forward" size={16} color={COLORS.accent} />
                 </View>
               </View>
             </TouchableOpacity>
@@ -177,33 +259,59 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* MODAL DETALLES */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalBg}>
-          <View style={[styles.modalContent, styles.activeBorder]}>
-            <Image source={{ uri: selectedLugar?.imagen }} style={styles.modalImg} />
+      {/* MODAL */}
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalBackdrop} onPress={() => setModalVisible(false)} />
             
-            <View style={styles.modalBody}>
-              <Text style={styles.modalTitleText}>{selectedLugar?.titulo}</Text>
-              
-              <Text style={styles.modalLabel}>UBICACIÓN</Text>
-              <Text style={styles.modalText}>{selectedLugar?.descripcion}</Text>
-              
-              <Text style={styles.modalLabel}>PROMOCIÓN</Text>
-              <View style={styles.promoBox}>
-                <Ionicons name="pricetag" size={20} color={COLORS.accent} style={{marginRight: 10}} />
-                <Text style={styles.promoText}>{selectedLugar?.descuentos || "Sin promos activas"}</Text>
-              </View>
-              
-              <TouchableOpacity onPress={() => handleOpenMaps(selectedLugar?.mapLink || '')} style={styles.mainBtn}>
-                <Text style={styles.mainBtnText}>VER EN MAPA</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.secBtn}>
-                <Text style={styles.secBtnText}>CERRAR</Text>
-              </TouchableOpacity>
+            <View style={styles.modalCard}>
+                <View style={styles.modalImageWrapper}>
+                    <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} />
+                    <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+                        <Ionicons name="close" size={24} color="#FFF" />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <View style={styles.tagPill}>
+                            <Text style={styles.tagText}>{selectedLugar?.categoria}</Text>
+                        </View>
+                        <View style={styles.cityPill}>
+                            <Ionicons name="location-sharp" size={14} color={COLORS.textSec} />
+                            <Text style={styles.cityText}>{selectedLugar?.ciudad}</Text>
+                        </View>
+                    </View>
+
+                    {/* Título Modal en Heavitas */}
+                    <Text style={styles.modalTitle}>{selectedLugar?.titulo}</Text>
+                    
+                    <View style={styles.divider} />
+                    
+                    <Text style={styles.sectionLabel}>ACERCA DEL LUGAR</Text>
+                    <Text style={styles.modalDescription}>{selectedLugar?.descripcion}</Text>
+
+                    {selectedLugar?.descuentos ? (
+                        <View style={styles.couponContainer}>
+                            <View style={styles.couponLeft}>
+                                <Ionicons name="gift-outline" size={24} color={COLORS.accent} />
+                            </View>
+                            <View style={styles.couponRight}>
+                                <Text style={styles.couponTitle}>Beneficio Qronnos</Text>
+                                <Text style={styles.couponValue}>{selectedLugar.descuentos}</Text>
+                            </View>
+                        </View>
+                    ) : null}
+
+                    <TouchableOpacity 
+                        onPress={() => handleOpenMaps(selectedLugar?.mapLink || '')} 
+                        style={styles.actionButton}
+                    >
+                        <Text style={styles.actionButtonText}>IR AHORA</Text>
+                        <Ionicons name="navigate" size={20} color="#000" style={{marginLeft: 8}}/>
+                    </TouchableOpacity>
+                </View>
             </View>
-          </View>
         </View>
       </Modal>
     </View>
@@ -212,135 +320,266 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  row: { flexDirection: 'row', alignItems: 'center' },
   
-  // HEADER
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 20, 
-    paddingBottom: 20,
+  // --- HEADER ---
+  header: {
     backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBg
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    zIndex: 10,
   },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: COLORS.text, letterSpacing: 0.5 },
-  
-  // DROPDOWN
-  dropdownContainer: { padding: 20, zIndex: 100 },
-  dropdownButton: {
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.cardBg, // Fondo oscuro
-    padding: 16,
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  // Subtítulo: Poppins Bold (pequeño y espaciado)
+  headerSubtitle: { 
+    fontFamily: FONTS.textBold, 
+    fontSize: 10, 
+    color: COLORS.accent, 
+    letterSpacing: 3, 
+    marginBottom: 2
+  },
+  // Título: Heavitas (Grande y sólido)
+  headerTitle: { 
+    fontFamily: FONTS.title, 
+    fontSize: 26, 
+    color: COLORS.text, 
+    textAlign: 'center' 
+  },
+  iconButton: { padding: 8, backgroundColor: COLORS.cardBg, borderRadius: 12 },
+  
+  // --- CITY SELECTOR ---
+  cityFilterContainer: { marginBottom: 5 },
+  citySelectorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBg,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.border
   },
-  activeBorder: { borderColor: COLORS.accent, borderWidth: 1 },
-  dropdownButtonText: { fontSize: 16, fontWeight: '600', marginLeft: 10, color: COLORS.text },
-  dropdownList: { 
-    backgroundColor: COLORS.cardBg, 
-    marginTop: 8, 
-    borderRadius: 12, 
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden'
+  // Selector Texto: Poppins Medium
+  citySelectorText: { 
+    flex: 1, 
+    color: COLORS.text, 
+    marginHorizontal: 10, 
+    fontSize: 14, 
+    fontFamily: FONTS.textMedium 
   },
-  dropdownItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  dropdownItemText: { fontSize: 15, color: COLORS.textSec },
-
-  // CATEGORIAS
-  categoryScroll: { paddingLeft: 20, marginBottom: 25 },
-  catBtn: { 
-    paddingVertical: 10, 
-    paddingHorizontal: 20, 
-    borderRadius: 20, 
-    backgroundColor: COLORS.cardBg, 
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  catBtnActive: { 
-    backgroundColor: COLORS.accent, 
-    borderColor: COLORS.accent,
-    // Sombra sutil neon
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5
-  },
-  catText: { fontWeight: '600', color: COLORS.textSec },
-  catTextActive: { color: '#000', fontWeight: 'bold' }, // Texto negro sobre el verde neon para contraste
-
-  // CARDS LISTA
-  listContainer: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 22, fontWeight: '800', marginBottom: 20, color: COLORS.text },
-  raisedCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 20,
-    marginBottom: 25,
-    overflow: 'hidden',
-    // Sombra estilo "Glow"
+  
+  // --- CITY DROPDOWN ---
+  cityDropdown: {
+    position: 'absolute',
+    left: 20, right: 20,
+    backgroundColor: '#232936',
+    borderRadius: 12,
+    padding: 5,
+    zIndex: 100,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)'
+    borderColor: COLORS.border
   },
-  cardImg: { width: '100%', height: 180, opacity: 0.9 },
-  cardOverlay: { position: 'absolute', top: 15, left: 15 },
-  categoryBadge: { 
-    backgroundColor: 'rgba(0,0,0,0.7)', 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.accent
-  },
-  categoryBadgeText: { color: COLORS.accent, fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
-  cardInfo: { padding: 20 },
-  cardTitleText: { fontSize: 20, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
-  cardSubText: { fontSize: 14, color: COLORS.textSec, fontWeight: '500', marginLeft: 6 },
-
-  // MODAL
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '85%', backgroundColor: COLORS.background, borderRadius: 24, overflow: 'hidden', elevation: 25, borderColor: COLORS.accent, borderWidth: 1 },
-  modalImg: { width: '100%', height: 220 },
-  modalBody: { padding: 25 },
-  modalTitleText: { fontSize: 26, fontWeight: '900', color: COLORS.text, marginBottom: 5 },
-  modalLabel: { fontSize: 12, fontWeight: '800', color: COLORS.accent, marginTop: 20, letterSpacing: 1.5 },
-  modalText: { fontSize: 16, color: COLORS.textSec, marginTop: 8, lineHeight: 22 },
-  
-  promoBox: { 
+  cityDropdownItem: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)'
+  },
+  cityDropdownText: { 
+    color: COLORS.textSec, 
+    fontSize: 14, 
+    fontFamily: FONTS.textRegular 
+  },
+
+  // --- CATEGORIES (Tabs) ---
+  categoriesContainer: { marginTop: 15, marginBottom: 10 },
+  tabItem: { marginRight: 25, alignItems: 'center', paddingVertical: 5 },
+  
+  // Tabs Texto: Poppins Medium (Inactivo) vs Bold (Activo)
+  tabText: { 
+    fontSize: 14, 
+    color: COLORS.textSec, 
+    fontFamily: FONTS.textMedium 
+  },
+  tabTextActive: { 
+    color: COLORS.text, 
+    fontFamily: FONTS.textBold 
+  },
+  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accent, marginTop: 4 },
+
+  // --- LIST ---
+  listContainer: { paddingHorizontal: 20, paddingTop: 10 },
+  resultsText: { 
+    color: COLORS.textSec, 
+    fontSize: 12, 
+    marginBottom: 15, 
+    fontFamily: FONTS.textMedium,
+    letterSpacing: 0.5
+  },
+  
+  // --- PRO CARD ---
+  proCard: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 20,
+    marginBottom: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  imageContainer: { height: 180, width: '100%', position: 'relative' },
+  cardImage: { width: '100%', height: '100%' },
+  discountBadge: {
+    position: 'absolute',
+    bottom: 10, left: 10,
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 6
+  },
+  discountText: { 
+    color: '#000', 
+    fontFamily: FONTS.textBold, 
+    fontSize: 12 
+  },
+  
+  cardContent: { padding: 16 },
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  cardCategory: { 
+    fontSize: 10, 
+    color: COLORS.accent, 
+    fontFamily: FONTS.textBold, 
+    letterSpacing: 1 
+  },
+  locationRow: { flexDirection: 'row', alignItems: 'center' },
+  cardCity: { 
+    fontSize: 12, 
+    color: COLORS.textSec, 
+    marginLeft: 4, 
+    fontFamily: FONTS.textMedium 
+  },
+  
+  // Titulo Card: Heavitas
+  cardTitle: { 
+    fontSize: 18, 
+    color: COLORS.text, 
+    marginBottom: 6,
+    fontFamily: FONTS.title 
+  },
+  // Descripcion: Poppins Regular
+  cardDesc: { 
+    fontSize: 13, 
+    color: COLORS.textSec, 
+    marginBottom: 14, 
+    fontFamily: FONTS.textRegular 
+  },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12 },
+  moreInfoText: { 
+    color: COLORS.accent, 
+    fontSize: 13, 
+    fontFamily: FONTS.textBold, 
+    marginRight: 5 
+  },
+
+  // --- MODAL ---
+  modalContainer: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)' },
+  modalCard: {
+    height: '85%',
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    overflow: 'hidden'
+  },
+  modalImageWrapper: { height: 250, width: '100%', position: 'relative' },
+  modalHeroImage: { width: '100%', height: '100%' },
+  closeBtn: {
+    position: 'absolute', top: 15, right: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20, padding: 8
+  },
+  modalContent: { flex: 1, padding: 25 },
+  modalHeader: { flexDirection: 'row', marginBottom: 15 },
+  tagPill: { backgroundColor: COLORS.cardBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 10, borderWidth: 1, borderColor: COLORS.border },
+  tagText: { color: COLORS.text, fontSize: 11, fontFamily: FONTS.textBold },
+  cityPill: { flexDirection: 'row', alignItems: 'center' },
+  cityText: { color: COLORS.textSec, fontSize: 13, marginLeft: 5, fontFamily: FONTS.textMedium },
+  
+  // Titulo Modal: Heavitas (Grande)
+  modalTitle: { 
+    fontSize: 24, 
+    color: COLORS.text, 
+    marginBottom: 10,
+    fontFamily: FONTS.title
+  },
+  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
+  sectionLabel: { 
+    fontSize: 11, 
+    color: COLORS.textSec, 
+    marginBottom: 8, 
+    letterSpacing: 1,
+    fontFamily: FONTS.textBold 
+  },
+  modalDescription: { 
+    fontSize: 15, 
+    color: '#bdc1c6', 
+    lineHeight: 24, 
+    marginBottom: 25,
+    fontFamily: FONTS.textRegular 
+  },
+  
+  couponContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#131f1c',
+    borderRadius: 16,
+    padding: 15,
     alignItems: 'center',
-    backgroundColor: 'rgba(1, 195, 142, 0.1)', // Verde transparente
-    padding: 15, 
-    borderRadius: 12, 
+    marginBottom: 25,
     borderWidth: 1,
     borderColor: 'rgba(1, 195, 142, 0.3)',
-    marginTop: 10 
+    borderStyle: 'dashed'
   },
-  promoText: { color: COLORS.accent, fontWeight: '700', fontSize: 15 },
-  
-  mainBtn: { 
-    backgroundColor: COLORS.accent, 
-    padding: 18, 
-    borderRadius: 16, 
-    alignItems: 'center', 
-    marginTop: 30,
+  couponLeft: { marginRight: 15 },
+  couponRight: { flex: 1 },
+  couponTitle: { 
+    color: COLORS.accent, 
+    fontSize: 11, 
+    fontFamily: FONTS.textBold, 
+    textTransform: 'uppercase' 
+  },
+  couponValue: { 
+    color: COLORS.text, 
+    fontSize: 16, 
+    fontFamily: FONTS.textBold,
+    marginTop: 2
+  },
+
+  actionButton: {
+    backgroundColor: COLORS.accent,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
     shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6
   },
-  mainBtnText: { color: '#000', fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
-  secBtn: { padding: 15, alignItems: 'center', marginTop: 10 },
-  secBtnText: { color: COLORS.textSec, fontWeight: '600' }
+  actionButtonText: { 
+    color: '#000', 
+    fontSize: 16, 
+    fontFamily: FONTS.textBold, 
+    letterSpacing: 0.5 
+  }
 });

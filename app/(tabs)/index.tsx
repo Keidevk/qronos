@@ -1,27 +1,34 @@
+import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
-import { Alert, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-// Importaciones de Firebase Auth
 import { reload, signInWithEmailAndPassword } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from '../../src/firebaseConfig';
 
-// PALETA DE COLORES QRONNOS (Igual al Dashboard)
+// --- PALETA QRONNOS ---
 const COLORS = {
-  background: '#1a1e29', // Fondo Principal
-  cardBg: '#132d46',     // Fondo de Inputs
-  accent: '#01c38e',     // Neón Mint
-  text: '#ffffff',       // Blanco
-  textSec: '#b0b3b8',    // Gris
-  border: '#2a3b55'      // Bordes
+    background: '#0f1115', 
+    cardBg: '#181b21',     
+    accent: '#01c38e',     
+    text: '#ffffff',       
+    textSec: '#8b9bb4',    
+    border: '#232936'      
+};
+
+// --- CONSTANTES DE FUENTES ---
+const FONTS = {
+    title: 'Heavitas',
+    textRegular: 'Poppins-Regular',
+    textMedium: 'Poppins-Medium',
+    textBold: 'Poppins-Bold'
 };
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
 
-// Componente Footer para QRONNOS (Estilo Dark/Neon)
 const QronnosFooter = () => (
     <View style={styles.footerContainer}>
         <Text style={styles.footerText}>QRONNOS</Text>
@@ -34,6 +41,15 @@ export default function HomeScreen() {
     
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+    // CARGA DE FUENTES (Rutas corregidas a 2 niveles ../../)
+    const [fontsLoaded] = useFonts({
+        'Heavitas': require('../../assets/fonts/Heavitas.ttf'),
+        'Poppins-Regular': require('../../assets/fonts/Poppins-Regular.ttf'),
+        'Poppins-Medium': require('../../assets/fonts/Poppins-Medium.ttf'),
+        'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
+    });
 
     useEffect(() => {
         async function checkUserIdAndRedirect() {
@@ -42,26 +58,22 @@ export default function HomeScreen() {
                 const empresaId = await SecureStore.getItemAsync('empresa_id'); 
 
                 if (userId || empresaId) {
-                    console.log(`Sesión encontrada. Redirigiendo...`);
                     router.replace('/(tabs)/dashboard');
-                } else {
-                    console.log('User ID no encontrado. Permaneciendo en la pantalla.');
                 }
             } catch (error) {
-                console.error('Error al acceder a SecureStore o al navegar:', error);
+                console.error('Error al acceder a SecureStore:', error);
             }
         }
         checkUserIdAndRedirect();
     }, []);
 
-    function navigateToRegister() {
-        router.push('/(tabs)/account/register');
-    }
-
     async function handleLogin() {
-        console.log("Login function called");
-        console.log("Email:", email);
+        if (!email || !password) {
+            Alert.alert("Campos vacíos", "Por favor ingresa tus credenciales.");
+            return;
+        }
         
+        setIsLoggingIn(true);
         try {
             let expoToken = null;
             try {
@@ -69,10 +81,9 @@ export default function HomeScreen() {
                 if (projectId) {
                     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
                     expoToken = tokenData.data;
-                    console.log("Push Token generado:", expoToken);
                 }
             } catch (e) {
-                console.log("Error al obtener token de notificaciones:", e);
+                console.log("Error push token:", e);
             }
 
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -81,21 +92,15 @@ export default function HomeScreen() {
             
             if (!user.emailVerified) {
                 Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
+                setIsLoggingIn(false);
                 return;
-            }
-
-            if(!expoToken){
-                await SecureStore.getItemAsync('expoPushToken').then(token => {
-                    expoToken = token;
-                });
-                console.log("Usando token almacenado:", expoToken);
             }
 
             const response = await fetch(LOGIN_CLIENTE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    email: email, 
+                    email: email.trim(), 
                     password: password,
                     pushToken: expoToken 
                 }),
@@ -104,59 +109,58 @@ export default function HomeScreen() {
             const data = await response.json();
             
             if(response.ok && data.code === 200) {
-                Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
-                
-                const nombreCliente = data.cliente;
-                const nombreEmpresa = data.empresa;
-                const userId = data.token; 
-                const empresaId = data.token_empresa;
-                const jwt = data.jwt;
-                const rol = data.rol;
+                const { token, token_empresa, jwt, rol, cliente, empresa } = data;
 
                 if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
                 if (rol) await SecureStore.setItemAsync('rol', String(rol));
 
-                if (userId) {
-                    await SecureStore.setItemAsync('user_id', String(userId));
-                    await SecureStore.setItemAsync('nameCliente', String(nombreCliente));
+                if (token) {
+                    await SecureStore.setItemAsync('user_id', String(token));
+                    await SecureStore.setItemAsync('nameCliente', String(cliente));
                 }
 
-                if(empresaId){
-                    await SecureStore.setItemAsync('empresa_id', String(empresaId));
-                    await SecureStore.setItemAsync('nameEmpresa', String(nombreEmpresa));
+                if(token_empresa){
+                    await SecureStore.setItemAsync('empresa_id', String(token_empresa));
+                    await SecureStore.setItemAsync('nameEmpresa', String(empresa));
                 }
 
                 router.replace('/(tabs)/dashboard'); 
             
             } else {
-                Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
+                Alert.alert("Error", data.message || "Credenciales incorrectas.");
             }
 
         } catch (error: any) {
-            console.error("Error en el login:", error);
-            let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
-            if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-                errorMessage = "Correo o contraseña incorrecta.";
-            } 
-            Alert.alert("Error de Inicio de Sesión", errorMessage);
+            Alert.alert("Error de Acceso", "Correo o contraseña incorrecta.");
+        } finally {
+            setIsLoggingIn(false);
         }
+    }
+
+    if (!fontsLoaded) {
+        return (
+            <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center' }}>
+                <ActivityIndicator color={COLORS.accent} />
+            </View>
+        );
     }
 
     return (
         <View style={styles.fullContainer}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
             
-            <View style={{ paddingTop: safeareaInsets.top + 60, ...styles.containerLogin }}>
+            <View style={{ paddingTop: safeareaInsets.top + 80, ...styles.containerLogin }}>
                 
+                <Text style={styles.welcomeText}>BIENVENIDO A</Text>
                 <Text style={styles.Titulo}>INICIAR <Text style={{color: COLORS.accent}}>SESIÓN</Text></Text>
-                <Text style={styles.Subtitulo}>Ingresa tus credenciales para continuar</Text>
+                <Text style={styles.Subtitulo}>Accede a tu ecosistema de beneficios</Text>
                 
                 <View style={styles.inputWrapper}>
                     <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
                     <View style={styles.inputShadowContainer}>
                         <TextInput
                             placeholder="ejemplo@qronnos.com"
-                            placeholderTextColor={COLORS.textSec} 
+                            placeholderTextColor="rgba(255,255,255,0.2)" 
                             style={styles.TextInput}
                             value={email} 
                             onChangeText={setEmail} 
@@ -171,7 +175,7 @@ export default function HomeScreen() {
                     <View style={styles.inputShadowContainer}>
                         <TextInput
                             placeholder="********"
-                            placeholderTextColor={COLORS.textSec} 
+                            placeholderTextColor="rgba(255,255,255,0.2)" 
                             style={styles.TextInput}
                             value={password} 
                             onChangeText={setPassword} 
@@ -180,14 +184,22 @@ export default function HomeScreen() {
                     </View>
                 </View>
                 
-                <TouchableOpacity onPress={navigateToRegister}>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/account/register')} style={styles.registerLink}>
                     <Text style={styles.textRegister}>
-                        ¿Aún no tienes cuenta? <Text style={{fontWeight: 'bold', color: COLORS.accent}}>Regístrate</Text>
+                        ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate aquí</Text>
                     </Text>
                 </TouchableOpacity>
                 
-                <TouchableOpacity onPress={handleLogin} style={styles.button}>
-                    <Text style={styles.textButton}>INGRESAR</Text>
+                <TouchableOpacity 
+                    onPress={handleLogin} 
+                    style={[styles.button, isLoggingIn && { opacity: 0.7 }]}
+                    disabled={isLoggingIn}
+                >
+                    {isLoggingIn ? (
+                        <ActivityIndicator color="#000" />
+                    ) : (
+                        <Text style={styles.textButton}>INGRESAR</Text>
+                    )}
                 </TouchableOpacity>
 
             </View>
@@ -203,38 +215,47 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     containerLogin: {
-        paddingHorizontal: 30, 
+        paddingHorizontal: 35, 
+    },
+    welcomeText: {
+        fontFamily: FONTS.textBold,
+        fontSize: 12,
+        color: COLORS.accent,
+        textAlign: 'center',
+        letterSpacing: 4,
+        marginBottom: 5
     },
     Titulo: {
-        fontSize: 32,
-        fontWeight: '900', 
+        fontSize: 28,
+        fontFamily: FONTS.title, 
         color: COLORS.text, 
         textAlign: 'center',
-        letterSpacing: 1,
     },
     Subtitulo: {
         fontSize: 14,
+        fontFamily: FONTS.textRegular,
         color: COLORS.textSec,
         textAlign: 'center',
-        marginTop: 8,
-        marginBottom: 40,
+        marginTop: 10,
+        marginBottom: 50,
     },
     inputWrapper: {
-        marginBottom: 20,
+        marginBottom: 25,
     },
     label: {
-        color: COLORS.accent,
-        fontSize: 12,
-        fontWeight: '800',
-        marginBottom: 8,
+        color: COLORS.text,
+        fontSize: 10,
+        fontFamily: FONTS.textBold,
+        marginBottom: 10,
         marginLeft: 5,
-        letterSpacing: 1,
+        letterSpacing: 1.5,
+        opacity: 0.6
     },
     inputShadowContainer: {
         backgroundColor: COLORS.cardBg,
-        borderRadius: 12,
+        borderRadius: 16,
         width: "100%",
-        height: 55,
+        height: 60,
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: COLORS.border,
@@ -242,56 +263,60 @@ const styles = StyleSheet.create({
     TextInput: {
         flex: 1,
         paddingHorizontal: 20,
-        fontSize: 16,
+        fontSize: 15,
+        fontFamily: FONTS.textMedium,
         color: COLORS.text,
     },
-    textRegister: {
+    registerLink: {
         marginTop: 10,
-        textAlign: 'center',
+        alignSelf: 'center'
+    },
+    textRegister: {
         color: COLORS.textSec,
-        fontSize: 14,
+        fontFamily: FONTS.textRegular,
+        fontSize: 13,
+    },
+    linkAccent: {
+        fontFamily: FONTS.textBold,
+        color: COLORS.accent,
     },
     button: {
         backgroundColor: COLORS.accent,
         width: "100%", 
         height: 60, 
-        marginTop: 35,
-        borderRadius: 16,
+        marginTop: 40,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        // Efecto Glow Neon
         shadowColor: COLORS.accent,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 10,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
     },
     textButton: {
         color: "#000",
-        fontSize: 16,
-        fontWeight: '900',
-        letterSpacing: 1.5,
+        fontSize: 15,
+        fontFamily: FONTS.title,
     },
     footerContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: 80,
-        backgroundColor: COLORS.background,
+        height: 100,
         justifyContent: 'center',
         alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: COLORS.border,
     },
     footerText: {
-        fontSize: 28,
-        fontWeight: '900',
+        fontSize: 34,
+        fontFamily: FONTS.title,
         color: COLORS.accent,
-        letterSpacing: 12,
-        opacity: 0.8,
+        letterSpacing: 15,
+        // --- NEÓN BRILLANTE ---
         textShadowColor: COLORS.accent,
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8, 
+        textShadowRadius: 15,
+        elevation: 10,
     }
 });
