@@ -48,22 +48,22 @@ const dataLugares: Lugar[] = [
   {
     id: 5,
     titulo: "1533 Restaurante & Bar",
-    descripcion: "Gastronomía histórica y coctelería de autor en el corazón de la ciudad.",
+    descripcion: "Centro, calle la soledad (36) # 5-82, Cartagena de Indias, Bolívar, Colombia",
     imagen: require('../../../assets/images/1533Restaurante.png'), 
-    descuentos: "10% OFF",
+    descuentos: "10%",
     categoria: 'Restaurantes',
     ciudad: 'Cartagena',
     mapLink: "https://maps.app.goo.gl/hvQafnq9fFSZujyu5" 
   },
   {
     id: 1,
-    titulo: "C.C. San Fernando",
-    descripcion: "Cl. 31 #82-267, Provincia de Cartagena, Bolívar, Colombia",
-    imagen: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1000&q=80",
-    descuentos: "10% Hamburguesas",
-    categoria: 'Comida rapida',
+    titulo: "AÚMA tierra & mar",
+    descripcion: "Callejon de los estribos #2-56, Cartagena de Indias, Bolívar, Colombia",
+    imagen: require('../../../assets/images/aumalogo.png'),
+    descuentos: "10%",
+    categoria: 'Restaurantes',
     ciudad: 'Cartagena',
-    mapLink: "https://maps.google.com"
+    mapLink: "https://maps.app.goo.gl/LGfJ6hrdKQGjKMsH7"
   },
   {
     id: 2,
@@ -226,7 +226,8 @@ export default function HomeScreen() {
               style={styles.proCard}
             >
               <View style={styles.imageContainer}>
-                  <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="cover" />
+                  {/* Cambio: resizeMode a 'contain' para que los logos no se corten */}
+                  <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="contain" />
                   
                   {lugar.descuentos && (
                     <View style={styles.discountBadge}>
@@ -266,7 +267,8 @@ export default function HomeScreen() {
             
             <View style={styles.modalCard}>
                 <View style={styles.modalImageWrapper}>
-                    <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} />
+                    {/* Cambio AQUI: Agregado resizeMode="contain" también en el modal */}
+                    <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} resizeMode="contain" />
                     <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                         <Ionicons name="close" size={24} color="#FFF" />
                     </TouchableOpacity>
