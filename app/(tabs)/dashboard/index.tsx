@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useFonts } from 'expo-font'; // IMPORTANTE: Necesario para cargar fuentes personalizadas
+import { useFonts } from 'expo-font';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Linking, Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,8 @@ const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 const COLORS = {
   background: '#0f1115',
   cardBg: '#181b21',
-  accent: '#01c38e',
+  accent: '#01c38e', // Verde Neón
+  secondaryAccent: '#4a5568', // Gris azulado para elementos secundarios
   text: '#ffffff',
   textSec: '#8b9bb4',
   border: '#232936',
@@ -19,11 +20,8 @@ const COLORS = {
 };
 
 // --- DEFINICIÓN DE FUENTES ---
-// Usamos constantes para facilitar cambios futuros
 const FONTS = {
-  // Heavitas suele ser una fuente display gruesa, ideal para logotipos y títulos cortos
   title: 'Heavitas', 
-  // Poppins para el resto
   textRegular: 'Poppins-Regular',
   textMedium: 'Poppins-Medium',
   textBold: 'Poppins-Bold'
@@ -31,7 +29,15 @@ const FONTS = {
 
 type Category = 'Todos' | 'Restaurantes' | 'Tiendas' | 'Ferreterias' | 'Comida rapida';
 const CATEGORIES: Category[] = ['Todos', 'Restaurantes', 'Tiendas', 'Ferreterias', 'Comida rapida'];
-const CIUDADES = ['Todas', 'Cartagena', 'Barranquilla', 'Caracas'];
+
+// --- CONFIGURACIÓN DE PAÍSES Y CIUDADES ---
+// Aquí definimos qué ciudades pertenecen a qué país
+const COUNTRIES_CONFIG: { [key: string]: string[] } = {
+  'Colombia': ['Todas', 'Cartagena', 'Barranquilla'],
+  'Venezuela': ['Todas', 'Caracas', 'Maracaibo'],
+};
+
+const COUNTRIES_LIST = Object.keys(COUNTRIES_CONFIG);
 
 interface Lugar {
   id: number;
@@ -39,6 +45,7 @@ interface Lugar {
   descripcion: string;
   imagen: any; 
   categoria: Category;
+  pais: string; // NUEVO CAMPO
   ciudad: string;
   descuentos?: string;
   mapLink: string;
@@ -46,53 +53,34 @@ interface Lugar {
 
 const dataLugares: Lugar[] = [
   {
-    id: 5,
+    id: 1,
     titulo: "1533 Restaurante & Bar",
     descripcion: "Centro, calle la soledad (36) # 5-82, Cartagena de Indias, Bolívar, Colombia",
     imagen: require('../../../assets/images/1533Restaurante.png'), 
     descuentos: "10%",
     categoria: 'Restaurantes',
+    pais: 'Colombia',
     ciudad: 'Cartagena',
     mapLink: "https://maps.app.goo.gl/hvQafnq9fFSZujyu5" 
   },
   {
-    id: 1,
+    id: 2,
     titulo: "AÚMA tierra & mar",
     descripcion: "Callejon de los estribos #2-56, Cartagena de Indias, Bolívar, Colombia",
     imagen: require('../../../assets/images/aumalogo.png'),
     descuentos: "10%",
     categoria: 'Restaurantes',
+    pais: 'Colombia',
     ciudad: 'Cartagena',
     mapLink: "https://maps.app.goo.gl/LGfJ6hrdKQGjKMsH7"
   },
-  {
-    id: 2,
-    titulo: "La Ferretería Mayor",
-    descripcion: "Especialistas en herramientas y construcción.",
-    imagen: "https://images.unsplash.com/photo-1581141849291-1125c7b692b5?auto=format&fit=crop&w=1000&q=80",
-    descuentos: "2x1 Alquiler",
-    categoria: 'Ferreterias',
-    ciudad: 'Cartagena',
-    mapLink: "https://maps.google.com"
-  },
-  {
-    id: 4,
-    titulo: "Mega Ropa",
-    descripcion: "Moda de temporada para toda la familia.",
-    imagen: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1000&q=80",
-    descuentos: "30% Selected",
-    categoria: 'Tiendas',
-    ciudad: 'Caracas',
-    mapLink: "https://maps.google.com"
-  }
+
 ];
 
 export default function HomeScreen() {
   const navigator: any = useNavigation();
   const safeAreaInsets = useSafeAreaInsets();
   
-  // --- CARGA DE FUENTES ---
-  // Asegúrate de que los nombres coincidan con tus archivos en assets/fonts
   const [fontsLoaded] = useFonts({
     'Heavitas': require('../../../assets/fonts/Heavitas.ttf'), 
     'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
@@ -103,16 +91,38 @@ export default function HomeScreen() {
   const [selectedLugar, setSelectedLugar] = useState<Lugar | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category>('Todos');
+  
+  // --- NUEVOS ESTADOS PARA PAÍS ---
+  const [selectedCountry, setSelectedCountry] = useState<string>('Colombia');
+  const [isCountryMenuOpen, setIsCountryMenuOpen] = useState(false);
+  
   const [selectedCity, setSelectedCity] = useState<string>('Todas');
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
+  // Calcular las ciudades disponibles según el país seleccionado
+  const availableCities = useMemo(() => {
+    return COUNTRIES_CONFIG[selectedCountry] || ['Todas'];
+  }, [selectedCountry]);
+
   const filteredLugares = useMemo(() => {
     return dataLugares.filter(lugar => {
+      // 1. Filtro por País (Estricto)
+      const matchCountry = lugar.pais === selectedCountry;
+      // 2. Filtro por Ciudad
       const matchCity = selectedCity === 'Todas' || lugar.ciudad === selectedCity;
+      // 3. Filtro por Categoría
       const matchCategory = selectedCategory === 'Todos' || lugar.categoria === selectedCategory;
-      return matchCity && matchCategory;
+      
+      return matchCountry && matchCity && matchCategory;
     });
-  }, [selectedCategory, selectedCity]);
+  }, [selectedCategory, selectedCity, selectedCountry]);
+
+  // Manejador para cambio de país
+  const handleCountryChange = (country: string) => {
+    setSelectedCountry(country);
+    setSelectedCity('Todas'); // Resetear ciudad al cambiar país
+    setIsCountryMenuOpen(false);
+  };
 
   const handleOpenMaps = async (mapLink: string) => {
     const supported = await Linking.canOpenURL(mapLink);
@@ -124,7 +134,6 @@ export default function HomeScreen() {
     return typeof img === 'string' ? { uri: img } : img;
   };
 
-  // Pantalla de carga mientras suben las fuentes
   if (!fontsLoaded) {
     return (
       <View style={[styles.container, {justifyContent: 'center', alignItems: 'center'}]}>
@@ -145,9 +154,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             
             <View style={{ alignItems: 'center' }}>
-                {/* Subtítulo en Poppins Bold para contraste */}
                 <Text style={styles.headerSubtitle}>ECOSISTEMA</Text>
-                {/* Título principal en Heavitas */}
                 <Text style={styles.headerTitle}>QRONNOS</Text>
             </View>
 
@@ -156,32 +163,75 @@ export default function HomeScreen() {
             </TouchableOpacity>
         </View>
 
-        {/* SELECTOR DE CIUDAD */}
-        <View style={styles.cityFilterContainer}>
+        {/* --- FILTROS DE UBICACIÓN (PAÍS Y CIUDAD) --- */}
+        <View style={styles.locationFiltersContainer}>
+            
+            {/* 1. SELECTOR DE PAÍS (Pequeño, arriba) */}
+            <View style={{alignItems: 'flex-start', marginBottom: 8}}>
+                <TouchableOpacity 
+                    style={styles.countrySelectorBtn}
+                    onPress={() => {
+                        setIsCountryMenuOpen(!isCountryMenuOpen);
+                        setIsCityMenuOpen(false); // Cerrar menú de ciudad si se abre país
+                    }}
+                >
+                    <Ionicons name="globe-outline" size={14} color={COLORS.textSec} />
+                    <Text style={styles.countrySelectorText}>País: <Text style={{color: COLORS.accent}}>{selectedCountry}</Text></Text>
+                    <Ionicons name="chevron-down" size={12} color={COLORS.textSec} />
+                </TouchableOpacity>
+            </View>
+
+            {/* 2. SELECTOR DE CIUDAD (Grande, principal) */}
             <TouchableOpacity 
                 style={styles.citySelectorBtn} 
-                onPress={() => setIsCityMenuOpen(!isCityMenuOpen)}
+                onPress={() => {
+                    setIsCityMenuOpen(!isCityMenuOpen);
+                    setIsCountryMenuOpen(false); // Cerrar menú de país si se abre ciudad
+                }}
             >
                 <Ionicons name="location-sharp" size={18} color={COLORS.accent} />
                 <Text style={styles.citySelectorText}>
-                    {selectedCity === 'Todas' ? 'Explorar todas las ciudades' : selectedCity}
+                    {selectedCity === 'Todas' ? `Explorar ${selectedCountry}` : selectedCity}
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={COLORS.textSec} />
             </TouchableOpacity>
         </View>
       </View>
       
-      {/* MENÚ FLOTANTE CIUDAD */}
+      {/* MENÚ FLOTANTE: PAÍS */}
+      {isCountryMenuOpen && (
+        <View style={[styles.floatingDropdown, { top: safeAreaInsets.top + 110 }]}>
+            <Text style={styles.dropdownHeaderLabel}>Selecciona tu país</Text>
+            {COUNTRIES_LIST.map((pais) => (
+            <TouchableOpacity 
+                key={pais}
+                style={styles.dropdownItem}
+                onPress={() => handleCountryChange(pais)}
+            >
+                <Text style={[
+                    styles.dropdownText, 
+                    selectedCountry === pais && { color: COLORS.accent, fontFamily: FONTS.textBold }
+                ]}>
+                    {pais}
+                </Text>
+                {selectedCountry === pais && <Ionicons name="checkmark" size={18} color={COLORS.accent}/>}
+            </TouchableOpacity>
+            ))}
+        </View>
+      )}
+
+      {/* MENÚ FLOTANTE: CIUDAD */}
       {isCityMenuOpen && (
-        <View style={[styles.cityDropdown, { top: safeAreaInsets.top + 115 }]}>
-            {CIUDADES.map((ciudad) => (
+        <View style={[styles.floatingDropdown, { top: safeAreaInsets.top + 155 }]}>
+            <Text style={styles.dropdownHeaderLabel}>Ciudades en {selectedCountry}</Text>
+            {availableCities.map((ciudad) => (
             <TouchableOpacity 
                 key={ciudad}
-                style={styles.cityDropdownItem}
+                style={styles.dropdownItem}
                 onPress={() => { setSelectedCity(ciudad); setIsCityMenuOpen(false); }}
             >
                 <Text style={[
-                    styles.cityDropdownText, 
+                    styles.dropdownText, 
                     selectedCity === ciudad && { color: COLORS.accent, fontFamily: FONTS.textBold }
                 ]}>
                     {ciudad}
@@ -215,7 +265,11 @@ export default function HomeScreen() {
         {/* LISTADO */}
         <View style={styles.listContainer}>
           <Text style={styles.resultsText}>
-            {filteredLugares.length} {filteredLugares.length === 1 ? 'Aliado encontrado' : 'Aliados encontrados'}
+            Mostrando resultados en <Text style={{color: COLORS.accent, fontFamily: FONTS.textBold}}>{selectedCountry}</Text>
+             {selectedCity !== 'Todas' ? ` > ${selectedCity}` : ''}
+          </Text>
+          <Text style={[styles.resultsText, {marginTop: -10, fontSize: 11}]}>
+             {filteredLugares.length} {filteredLugares.length === 1 ? 'Aliado encontrado' : 'Aliados encontrados'}
           </Text>
           
           {filteredLugares.map((lugar) => (
@@ -226,7 +280,6 @@ export default function HomeScreen() {
               style={styles.proCard}
             >
               <View style={styles.imageContainer}>
-                  {/* Cambio: resizeMode a 'contain' para que los logos no se corten */}
                   <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="contain" />
                   
                   {lugar.descuentos && (
@@ -234,6 +287,10 @@ export default function HomeScreen() {
                         <Text style={styles.discountText}>{lugar.descuentos}</Text>
                     </View>
                   )}
+                  {/* Etiqueta de País pequeña en la imagen */}
+                  <View style={styles.countryBadge}>
+                       <Text style={styles.countryBadgeText}>{lugar.pais}</Text>
+                  </View>
               </View>
               
               <View style={styles.cardContent}>
@@ -245,9 +302,7 @@ export default function HomeScreen() {
                     </View>
                 </View>
                 
-                {/* Título en Heavitas */}
                 <Text style={styles.cardTitle}>{lugar.titulo}</Text>
-                {/* Descripción en Poppins Regular */}
                 <Text style={styles.cardDesc} numberOfLines={1}>{lugar.descripcion}</Text>
                 
                 <View style={styles.cardFooter}>
@@ -257,6 +312,15 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           ))}
+
+          {filteredLugares.length === 0 && (
+             <View style={{alignItems: 'center', marginTop: 30}}>
+                 <Ionicons name="planet-outline" size={50} color={COLORS.border} />
+                 <Text style={{color: COLORS.textSec, fontFamily: FONTS.textMedium, marginTop: 10}}>
+                     No hay aliados en esta zona aún.
+                 </Text>
+             </View>
+          )}
         </View>
       </ScrollView>
 
@@ -267,7 +331,6 @@ export default function HomeScreen() {
             
             <View style={styles.modalCard}>
                 <View style={styles.modalImageWrapper}>
-                    {/* Cambio AQUI: Agregado resizeMode="contain" también en el modal */}
                     <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} resizeMode="contain" />
                     <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                         <Ionicons name="close" size={24} color="#FFF" />
@@ -281,11 +344,10 @@ export default function HomeScreen() {
                         </View>
                         <View style={styles.cityPill}>
                             <Ionicons name="location-sharp" size={14} color={COLORS.textSec} />
-                            <Text style={styles.cityText}>{selectedLugar?.ciudad}</Text>
+                            <Text style={styles.cityText}>{selectedLugar?.ciudad}, {selectedLugar?.pais}</Text>
                         </View>
                     </View>
 
-                    {/* Título Modal en Heavitas */}
                     <Text style={styles.modalTitle}>{selectedLugar?.titulo}</Text>
                     
                     <View style={styles.divider} />
@@ -336,7 +398,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20
   },
-  // Subtítulo: Poppins Bold (pequeño y espaciado)
   headerSubtitle: { 
     fontFamily: FONTS.textBold, 
     fontSize: 10, 
@@ -344,7 +405,6 @@ const styles = StyleSheet.create({
     letterSpacing: 3, 
     marginBottom: 2
   },
-  // Título: Heavitas (Grande y sólido)
   headerTitle: { 
     fontFamily: FONTS.title, 
     fontSize: 26, 
@@ -353,8 +413,29 @@ const styles = StyleSheet.create({
   },
   iconButton: { padding: 8, backgroundColor: COLORS.cardBg, borderRadius: 12 },
   
-  // --- CITY SELECTOR ---
-  cityFilterContainer: { marginBottom: 5 },
+  // --- LOCATION FILTERS ---
+  locationFiltersContainer: { marginBottom: 5 },
+
+  // Selector de País (Estilo botón pequeño)
+  countrySelectorBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'transparent',
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      alignSelf: 'flex-start'
+  },
+  countrySelectorText: {
+    color: COLORS.textSec,
+    fontSize: 12,
+    fontFamily: FONTS.textMedium,
+    marginHorizontal: 6
+  },
+
+  // Selector de Ciudad (Estilo principal)
   citySelectorBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,7 +446,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border
   },
-  // Selector Texto: Poppins Medium
   citySelectorText: { 
     flex: 1, 
     color: COLORS.text, 
@@ -374,8 +454,8 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textMedium 
   },
   
-  // --- CITY DROPDOWN ---
-  cityDropdown: {
+  // --- DROPDOWNS UNIFICADOS ---
+  floatingDropdown: {
     position: 'absolute',
     left: 20, right: 20,
     backgroundColor: '#232936',
@@ -390,7 +470,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border
   },
-  cityDropdownItem: {
+  dropdownHeaderLabel: {
+      fontSize: 10,
+      color: COLORS.textSec,
+      fontFamily: FONTS.textBold,
+      paddingHorizontal: 15,
+      paddingVertical: 8,
+      textTransform: 'uppercase'
+  },
+  dropdownItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 14,
@@ -398,7 +486,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)'
   },
-  cityDropdownText: { 
+  dropdownText: { 
     color: COLORS.textSec, 
     fontSize: 14, 
     fontFamily: FONTS.textRegular 
@@ -407,8 +495,6 @@ const styles = StyleSheet.create({
   // --- CATEGORIES (Tabs) ---
   categoriesContainer: { marginTop: 15, marginBottom: 10 },
   tabItem: { marginRight: 25, alignItems: 'center', paddingVertical: 5 },
-  
-  // Tabs Texto: Poppins Medium (Inactivo) vs Bold (Activo)
   tabText: { 
     fontSize: 14, 
     color: COLORS.textSec, 
@@ -453,6 +539,18 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textBold, 
     fontSize: 12 
   },
+  countryBadge: {
+      position: 'absolute',
+      top: 10, right: 10,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      paddingHorizontal: 8, paddingVertical: 2,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)'
+  },
+  countryBadgeText: {
+      color: '#fff', fontSize: 10, fontFamily: FONTS.textMedium
+  },
   
   cardContent: { padding: 16 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -470,14 +568,12 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textMedium 
   },
   
-  // Titulo Card: Heavitas
   cardTitle: { 
     fontSize: 18, 
     color: COLORS.text, 
     marginBottom: 6,
     fontFamily: FONTS.title 
   },
-  // Descripcion: Poppins Regular
   cardDesc: { 
     fontSize: 13, 
     color: COLORS.textSec, 
@@ -516,7 +612,6 @@ const styles = StyleSheet.create({
   cityPill: { flexDirection: 'row', alignItems: 'center' },
   cityText: { color: COLORS.textSec, fontSize: 13, marginLeft: 5, fontFamily: FONTS.textMedium },
   
-  // Titulo Modal: Heavitas (Grande)
   modalTitle: { 
     fontSize: 24, 
     color: COLORS.text, 

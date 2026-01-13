@@ -3,8 +3,19 @@ import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { reload, signInWithEmailAndPassword } from 'firebase/auth';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from '../../src/firebaseConfig';
 
@@ -28,6 +39,7 @@ const FONTS = {
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
+const { width, height } = Dimensions.get('window');
 
 const QronnosFooter = () => (
     <View style={styles.footerContainer}>
@@ -42,14 +54,64 @@ export default function HomeScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
+    
+    // --- ESTADOS DE ANIMACIÓN ---
+    const [splashVisible, setSplashVisible] = useState(true);
+    const splashOpacity = useRef(new Animated.Value(1)).current;
+    const logoScale = useRef(new Animated.Value(0.8)).current; // Empieza un poco pequeño
+    const loginOpacity = useRef(new Animated.Value(0)).current; // El login empieza invisible
 
-    // CARGA DE FUENTES (Rutas corregidas a 2 niveles ../../)
+    // CARGA DE FUENTES
     const [fontsLoaded] = useFonts({
         'Heavitas': require('../../assets/fonts/Heavitas.ttf'),
         'Poppins-Regular': require('../../assets/fonts/Poppins-Regular.ttf'),
         'Poppins-Medium': require('../../assets/fonts/Poppins-Medium.ttf'),
         'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
     });
+
+    // --- EFECTO DE ANIMACIÓN DE ENTRADA ---
+    useEffect(() => {
+        if (fontsLoaded) {
+            Animated.sequence([
+                // 1. Entrada del logo (Fade In + Zoom suave)
+                Animated.parallel([
+                    Animated.timing(splashOpacity, {
+                        toValue: 1,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(logoScale, {
+                        toValue: 1,
+                        friction: 6,
+                        tension: 40,
+                        useNativeDriver: true,
+                    })
+                ]),
+                // 2. Pausa para ver el logo
+                Animated.delay(1500),
+                // 3. Salida del Splash y entrada del Login
+                Animated.parallel([
+                    Animated.timing(splashOpacity, {
+                        toValue: 0,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(logoScale, {
+                        toValue: 1.5, // Efecto de zoom hacia la cámara al salir
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(loginOpacity, {
+                        toValue: 1,
+                        duration: 800,
+                        useNativeDriver: true,
+                    })
+                ])
+            ]).start(() => {
+                setSplashVisible(false); // Desmontar visualmente el splash al terminar
+            });
+        }
+    }, [fontsLoaded]);
 
     useEffect(() => {
         async function checkUserIdAndRedirect() {
@@ -58,6 +120,8 @@ export default function HomeScreen() {
                 const empresaId = await SecureStore.getItemAsync('empresa_id'); 
 
                 if (userId || empresaId) {
+                    // Si ya hay sesión, redirigimos. 
+                    // Nota: La animación se cortará si el router reemplaza la pantalla, lo cual es deseable para usuarios logueados.
                     router.replace('/(tabs)/dashboard');
                 }
             } catch (error) {
@@ -149,62 +213,85 @@ export default function HomeScreen() {
         <View style={styles.fullContainer}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
             
-            <View style={{ paddingTop: safeareaInsets.top + 80, ...styles.containerLogin }}>
-                
-                <Text style={styles.welcomeText}>BIENVENIDO A</Text>
-                <Text style={styles.Titulo}>INICIAR <Text style={{color: COLORS.accent}}>SESIÓN</Text></Text>
-                <Text style={styles.Subtitulo}>Accede a tu ecosistema de beneficios</Text>
-                
-                <View style={styles.inputWrapper}>
-                    <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
-                    <View style={styles.inputShadowContainer}>
-                        <TextInput
-                            placeholder="ejemplo@qronnos.com"
-                            placeholderTextColor="rgba(255,255,255,0.2)" 
-                            style={styles.TextInput}
-                            value={email} 
-                            onChangeText={setEmail} 
-                            keyboardType="email-address" 
-                            autoCapitalize="none"
-                        /> 
+            {/* --- CONTENIDO DEL LOGIN (Animado con opacidad) --- */}
+            <Animated.View style={[styles.loginContentWrapper, { opacity: loginOpacity }]}>
+                <View style={{ paddingTop: safeareaInsets.top + 80, ...styles.containerLogin }}>
+                    
+                    <Text style={styles.welcomeText}>BIENVENIDO A</Text>
+                    <Text style={styles.Titulo}>INICIAR <Text style={{color: COLORS.accent}}>SESIÓN</Text></Text>
+                    <Text style={styles.Subtitulo}>Accede a tu ecosistema de beneficios</Text>
+                    
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+                        <View style={styles.inputShadowContainer}>
+                            <TextInput
+                                placeholder="ejemplo@qronnos.com"
+                                placeholderTextColor="rgba(255,255,255,0.2)" 
+                                style={styles.TextInput}
+                                value={email} 
+                                onChangeText={setEmail} 
+                                keyboardType="email-address" 
+                                autoCapitalize="none"
+                            /> 
+                        </View>
                     </View>
-                </View>
-                
-                <View style={styles.inputWrapper}>
-                    <Text style={styles.label}>CONTRASEÑA</Text>
-                    <View style={styles.inputShadowContainer}>
-                        <TextInput
-                            placeholder="********"
-                            placeholderTextColor="rgba(255,255,255,0.2)" 
-                            style={styles.TextInput}
-                            value={password} 
-                            onChangeText={setPassword} 
-                            secureTextEntry={true} 
-                        /> 
+                    
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>CONTRASEÑA</Text>
+                        <View style={styles.inputShadowContainer}>
+                            <TextInput
+                                placeholder="********"
+                                placeholderTextColor="rgba(255,255,255,0.2)" 
+                                style={styles.TextInput}
+                                value={password} 
+                                onChangeText={setPassword} 
+                                secureTextEntry={true} 
+                            /> 
+                        </View>
                     </View>
-                </View>
-                
-                <TouchableOpacity onPress={() => router.push('/(tabs)/account/register')} style={styles.registerLink}>
-                    <Text style={styles.textRegister}>
-                        ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate aquí</Text>
-                    </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                    onPress={handleLogin} 
-                    style={[styles.button, isLoggingIn && { opacity: 0.7 }]}
-                    disabled={isLoggingIn}
-                >
-                    {isLoggingIn ? (
-                        <ActivityIndicator color="#000" />
-                    ) : (
-                        <Text style={styles.textButton}>INGRESAR</Text>
-                    )}
-                </TouchableOpacity>
+                    
+                    <TouchableOpacity onPress={() => router.push('/(tabs)/account/register')} style={styles.registerLink}>
+                        <Text style={styles.textRegister}>
+                            ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate aquí</Text>
+                        </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        onPress={handleLogin} 
+                        style={[styles.button, isLoggingIn && { opacity: 0.7 }]}
+                        disabled={isLoggingIn}
+                    >
+                        {isLoggingIn ? (
+                            <ActivityIndicator color="#000" />
+                        ) : (
+                            <Text style={styles.textButton}>INGRESAR</Text>
+                        )}
+                    </TouchableOpacity>
 
-            </View>
-            
-            <QronnosFooter />
+                </View>
+                
+                <QronnosFooter />
+            </Animated.View>
+
+            {/* --- CAPA DE ANIMACIÓN SPLASH (Se superpone) --- */}
+            {splashVisible && (
+                <Animated.View 
+                    pointerEvents="none" 
+                    style={[
+                        styles.splashContainer, 
+                        { opacity: splashOpacity }
+                    ]}
+                >
+                    <Animated.Image 
+                        source={require('../../assets/images/animacionInicio.png')} 
+                        style={[
+                            styles.splashImage,
+                            { transform: [{ scale: logoScale }] }
+                        ]}
+                        resizeMode="contain"
+                    />
+                </Animated.View>
+            )}
         </View>
     );
 }
@@ -214,6 +301,22 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background,
         flex: 1,
     },
+    loginContentWrapper: {
+        flex: 1, // Ocupa todo el espacio
+    },
+    // --- ESTILOS DE LA ANIMACIÓN ---
+    splashContainer: {
+        ...StyleSheet.absoluteFillObject, // Cubre toda la pantalla
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100, // Se asegura de estar encima de todo
+    },
+    splashImage: {
+        width: width * 0.6, // 60% del ancho de la pantalla
+        height: width * 0.6,
+    },
+    // -----------------------------
     containerLogin: {
         paddingHorizontal: 35, 
     },
