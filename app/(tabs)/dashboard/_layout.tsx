@@ -1,14 +1,31 @@
-import { Tabs, useFocusEffect, useRouter } from 'expo-router';
-
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
+import { Tabs, useFocusEffect, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from 'react';
 import { Alert } from 'react-native';
+
+// PALETA DE COLORES QRONNOS (Sincronizada)
+const COLORS = {
+    background: '#0f1115', 
+    cardBg: '#181b21',     
+    accent: '#01c38e',     
+    text: '#ffffff',       
+    textSec: '#8b9bb4',    
+    border: '#232936'      
+};
 
 export default function TabLayout() {
     const router = useRouter();
     const [empresaState, setEmpresaState] = useState(false);
     const [adminState, setAdminState] = useState(false);
+
+    // Carga de fuentes para la tipografía de la barra
+    const [fontsLoaded] = useFonts({
+        'Heavitas': require('../../../assets/fonts/Heavitas.ttf'),
+        'Poppins-Medium': require('../../../assets/fonts/Poppins-Medium.ttf'),
+        'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
+    });
 
     // Verificación de credenciales
     useFocusEffect(
@@ -24,41 +41,58 @@ export default function TabLayout() {
         }, [])
     );
 
+    // Función de cierre de sesión
     const handleLogout = () => {
-        Alert.alert("Cerrar Sesión", "¿Estás seguro?", [
+        Alert.alert("Cerrar Sesión", "¿Estás seguro de que deseas salir?", [
             { text: "Cancelar", style: "cancel" },
             { 
                 text: "Sí, salir", 
                 style: "destructive",
                 onPress: async () => {
                     await SecureStore.deleteItemAsync('empresa_id');
+                    await SecureStore.deleteItemAsync('user_id');
                     await SecureStore.deleteItemAsync('rol');
-                    // Redirigir a login o reiniciar estado
                     router.replace('/'); 
                 }
             }
         ]);
     };
 
+    if (!fontsLoaded) return null;
+
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: "#000b76",
-                tabBarInactiveTintColor: "#8e8e93",
-                tabBarStyle: {
-                    height: 65,
-                    paddingBottom: 10,
-                    paddingTop: 5,
-                    borderTopWidth: 1,
-                    elevation: 0, // Quita sombra en Android
-                    shadowOpacity: 0, // Quita sombra en iOS
-                },
-                tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: '600',
-                },
+                tabBarActiveTintColor: COLORS.accent,
+                tabBarInactiveTintColor: COLORS.textSec,
                 headerShown: false,
-                headerTitleStyle: { color: '#000b76' }
+                
+                // ESTILO PROFESIONAL DE LA BARRA
+                tabBarStyle: {
+                    backgroundColor: COLORS.background,
+                    borderTopColor: COLORS.border,
+                    borderTopWidth: 1,
+                    height: 75, // Un poco más alta para mayor comodidad
+                    paddingBottom: 15,
+                    paddingTop: 10,
+                    elevation: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 10,
+                },
+                
+                // TIPOGRAFÍA APLICADA A LOS LABELS
+                tabBarLabelStyle: {
+                    fontFamily: 'Poppins-Medium', // Fuente corporativa
+                    fontSize: 11,
+                    marginTop: 2,
+                },
+                
+                // Estilo para los iconos
+                tabBarIconStyle: {
+                    marginBottom: -2,
+                }
             }}
         >
             <Tabs.Screen
@@ -67,7 +101,7 @@ export default function TabLayout() {
                     title: 'Inicio',
                     tabBarLabel: 'Inicio',
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
+                        <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
                     ),
                 }}
             />
@@ -77,9 +111,9 @@ export default function TabLayout() {
                 options={{
                     title: 'Mi Perfil',
                     tabBarLabel: 'Perfil',
-                    href: empresaState ? null : '/dashboard/profileScreen', // Oculta si hay empresa
+                    href: empresaState ? null : undefined, 
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
+                        <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />
                     ),
                 }}
             />
@@ -89,9 +123,9 @@ export default function TabLayout() {
                 options={{
                     title: 'Mi Empresa',
                     tabBarLabel: 'Empresa',
-                    href: !empresaState ? null : '/dashboard/companyScreen', // Solo si hay empresa
+                    href: !empresaState ? null : undefined,
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "business" : "business-outline"} size={24} color={color} />
+                        <Ionicons name={focused ? "business" : "business-outline"} size={22} color={color} />
                     ),
                 }}
             />
@@ -101,9 +135,9 @@ export default function TabLayout() {
                 options={{
                     title: 'Escáner QR',
                     tabBarLabel: 'QR',
-                    href: !empresaState ? null : '/dashboard/qrScreen',
+                    href: !empresaState ? null : undefined,
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "qr-code" : "qr-code-outline"} size={24} color={color} />
+                        <Ionicons name={focused ? "qr-code" : "qr-code-outline"} size={22} color={color} />
                     ),
                 }}
             />
@@ -113,24 +147,34 @@ export default function TabLayout() {
                 options={{
                     title: 'Panel Admin',
                     tabBarLabel: 'Admin',
-                    href: !adminState ? null : '/dashboard/admin',
+                    href: !adminState ? null : undefined,
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "shield-checkmark" : "shield-checkmark-outline"} size={24} color={color} />
+                        <Ionicons name={focused ? "shield-checkmark" : "shield-checkmark-outline"} size={22} color={color} />
                     ),
                 }}
             />
 
-            {/* --- BOTÓN DE LOGOUT (Acción Directa) --- */}
             <Tabs.Screen
-                name="close" // Nombre ficticio
+                name="close"
                 options={{
                     title: 'Salir',
                     tabBarLabel: 'Salir',
-                    href: '/(tabs)/dashboard/close',
                     tabBarIcon: ({ color }) => (
-                        <Ionicons name="log-out-outline" size={24} color="#e52222ff" />
+                        <Ionicons name="log-out-outline" size={22} color="#ff4d4d" />
                     ),
+                    // Etiqueta en rojo para resaltar acción destructiva
+                    tabBarLabelStyle: {
+                        color: '#ff4d4d',
+                        fontFamily: 'Poppins-Bold',
+                        fontSize: 11,
+                    }
                 }}
+                listeners={() => ({
+                    tabPress: (e) => {
+                        e.preventDefault();
+                        handleLogout();
+                    },
+                })}
             />
         </Tabs>
     );

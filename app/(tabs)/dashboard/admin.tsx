@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useFonts } from 'expo-font'; // Importante para las fuentes
 import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   RefreshControl,
   ScrollView,
   StatusBar,
@@ -15,8 +17,26 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
+const { width } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_API_URL; 
+
+// --- PALETA QRONNOS (Sincronizada) ---
+const COLORS = {
+  background: '#0f1115',
+  cardBg: '#181b21',
+  accent: '#01c38e',
+  text: '#ffffff',
+  textSec: '#8b9bb4',
+  border: '#232936'
+};
+
+// --- CONSTANTES DE FUENTES ---
+const FONTS = {
+  title: 'Heavitas',
+  textRegular: 'Poppins-Regular',
+  textMedium: 'Poppins-Medium',
+  textBold: 'Poppins-Bold'
+};
 
 interface Empresa {
   empresa_id: number;
@@ -48,6 +68,14 @@ export default function AdminDashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [jwtState, setJwt] = useState<string | null>(null);
 
+  // Carga de fuentes
+  const [fontsLoaded] = useFonts({
+    'Heavitas': require('../../../assets/fonts/Heavitas.ttf'),
+    'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
+    'Poppins-Medium': require('../../../assets/fonts/Poppins-Medium.ttf'),
+    'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
+  });
+
   useEffect(() => {
     const loadJwt = async () => {
       const jwt = await SecureStore.getItemAsync('jwt')
@@ -58,53 +86,32 @@ export default function AdminDashboardScreen() {
 
   const fetchData = async () => {
     try {
-      console.log("Iniciando petición a:", API_URL);
-      
-
-      // Obtenemos empresas y métricas
       const [empresasRes, metricasRes] = await Promise.all([
         fetch(`${API_URL}/api/empresa`,{
-           headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${jwtState}`, // Usamos el JWT para autorización
-                  },
+           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtState}` },
         }),
         fetch(`${API_URL}/api/metricas`,{
-          headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${jwtState}`, // Usamos el JWT para autorización
-                  },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtState}` },
         }) 
       ]);
 
-      // --- CORRECCIÓN DE PARSEO DE DATOS ---
-      
       if (empresasRes.ok) {
         const empresasData = await empresasRes.json();
-        // Verificamos si es array o si viene encapsulado
         const dataFinal = Array.isArray(empresasData) ? empresasData : (empresasData.empresas || []);
         setEmpresasRaw(dataFinal);
-      } else {
-        console.error("Error Status Empresas:", empresasRes.status);
       }
 
       if (metricasRes.ok) {
         const metricasData = await metricasRes.json();
-        // Verificamos si es array
         const dataFinal = Array.isArray(metricasData) ? metricasData : (metricasData.metricas || []);
         setMetricasRaw(dataFinal);
       } else {
-        // Si falla métricas (posible error 401 por falta de token), iniciamos vacío para no romper la app
-        console.error("Error Status Métricas:", metricasRes.status);
         setMetricasRaw([]); 
       }
 
     } catch (error) {
-      console.error("Error de red detallado:", error);
-      Alert.alert(
-        "Error de Conexión", 
-        "Verifica que la IP sea correcta y que tu celular esté en el mismo Wi-Fi que la PC."
-      );
+      console.error("Error de red:", error);
+      Alert.alert("Error", "Revisa tu conexión.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -112,23 +119,20 @@ export default function AdminDashboardScreen() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (jwtState) fetchData();
+  }, [jwtState]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
   };
 
-  // --- LÓGICA DE NEGOCIO ---
   const { globalStats, empresasProcesadas } = useMemo(() => {
     let gPuntos = 0;
     let gScans = 0;
 
     const dataProcesada: EmpresaConEstadisticas[] = empresasRaw.map((emp) => {
-      // Filtramos métricas de esta empresa
       const misMetricas = metricasRaw.filter(m => m.empresa_id === emp.empresa_id);
-
       const totalPuntos = misMetricas.reduce((sum, m) => sum + (m.puntos || 0), 0);
       const totalScans = misMetricas.reduce((sum, m) => sum + (m.vecesScan || 0), 0);
       const clientesUnicos = misMetricas.length;
@@ -140,96 +144,99 @@ export default function AdminDashboardScreen() {
     });
 
     return {
-      globalStats: {
-        puntos: gPuntos,
-        scans: gScans,
-        empresasActivas: empresasRaw.length
-      },
+      globalStats: { puntos: gPuntos, scans: gScans, empresasActivas: empresasRaw.length },
       empresasProcesadas: dataProcesada
     };
   }, [empresasRaw, metricasRaw]);
 
-  // --- COMPONENTES ---
   const KpiCard = ({ title, value, icon, color }: any) => (
     <View style={styles.kpiCard}>
-      <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}> 
-        <Ionicons name={icon} size={24} color={color} />
+      <View style={[styles.iconContainer, { backgroundColor: color + '15', borderColor: color + '30' }]}> 
+        <Ionicons name={icon} size={20} color={color} />
       </View>
       <View>
-        <Text style={styles.kpiValue}>{value}</Text>
-        <Text style={styles.kpiTitle}>{title}</Text>
+        <Text style={[styles.kpiValue, { color: COLORS.text }]}>{value}</Text>
+        <Text style={styles.kpiTitle}>{title.toUpperCase()}</Text>
       </View>
     </View>
   );
 
-  if (loading) {
+  if (!fontsLoaded || loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#000b76" />
-        <Text style={{ marginTop: 10, color: '#666' }}>Conectando al servidor...</Text>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={{ marginTop: 15, color: COLORS.textSec, fontFamily: FONTS.textMedium }}>Accediendo al sistema...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
-      {/* Header */}
-      <View style={{ paddingTop: safeAreaInsets.top, ...styles.header }}>
+      {/* Header Estilo Premium */}
+      <View style={[styles.header, { paddingTop: safeAreaInsets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigator.goBack()} style={styles.headerBtn}>
-          <Ionicons name="arrow-back" size={24} color="#000b76" />
+          <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Panel Administrativo</Text>
+        <View style={{alignItems: 'center'}}>
+            <Text style={styles.headerSubtitle}>ADMINISTRACIÓN</Text>
+            <Text style={styles.headerTitle}>DASHBOARD</Text>
+        </View>
         <TouchableOpacity onPress={onRefresh} style={styles.headerBtn}>
-             <Ionicons name="reload" size={24} color="#000b76" />
+             <Ionicons name="refresh-outline" size={22} color={COLORS.accent} />
         </TouchableOpacity>
       </View>
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
       >
         
         {/* KPI GLOBAL */}
-        <Text style={styles.sectionTitle}>Resumen Global</Text>
-        <View style={styles.kpiContainer}>
-            <KpiCard 
-                title="Puntos Totales" 
-                value={globalStats.puntos.toLocaleString()} 
-                icon="gift" 
-                color="#00C853" 
-            />
-            <KpiCard 
-                title="Escaneos Totales" 
-                value={globalStats.scans.toLocaleString()} 
-                icon="qr-code" 
-                color="#FF6D00" 
-            />
-        </View>
-        <View style={styles.kpiFullRow}>
-             <KpiCard 
-                title="Empresas Registradas" 
-                value={globalStats.empresasActivas} 
-                icon="business" 
-                color="#2962FF" 
-            />
+        <Text style={styles.sectionTitle}>MÉTRICAS GLOBALES</Text>
+        <View style={styles.kpiGrid}>
+            <View style={styles.kpiRow}>
+                <KpiCard 
+                    title="Puntos" 
+                    value={globalStats.puntos.toLocaleString()} 
+                    icon="gift-outline" 
+                    color={COLORS.accent} 
+                />
+                <KpiCard 
+                    title="Escaneos" 
+                    value={globalStats.scans.toLocaleString()} 
+                    icon="scan-outline" 
+                    color="#FF6D00" 
+                />
+            </View>
+            <View style={styles.kpiFullRow}>
+                <KpiCard 
+                    title="Empresas Activas" 
+                    value={globalStats.empresasActivas} 
+                    icon="business-outline" 
+                    color="#4F9CF9" 
+                />
+            </View>
         </View>
 
         {/* LISTADO DE EMPRESAS */}
-        <Text style={styles.sectionTitle}>Empresas Registradas & Métricas</Text>
-        <Text style={styles.subtitle}>
-          Rendimiento en tiempo real.
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>SOCIOS COMERCIALES</Text>
+            <View style={styles.countBadge}>
+                <Text style={styles.countText}>{empresasProcesadas.length}</Text>
+            </View>
+        </View>
 
         {empresasProcesadas.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="folder-open-outline" size={50} color="#ccc" />
-            <Text style={styles.emptyText}>No se encontraron empresas o error de conexión.</Text>
+            <Ionicons name="server-outline" size={50} color={COLORS.border} />
+            <Text style={styles.emptyText}>No se encontraron registros activos.</Text>
           </View>
         ) : (
           empresasProcesadas.map((emp) => (
-            <View key={emp.empresa_id} style={styles.empresaCard}>
+            <TouchableOpacity key={emp.empresa_id} activeOpacity={0.8} style={styles.empresaCard}>
                 <View style={styles.empresaHeader}>
                     <View style={styles.empresaIcon}>
                         <Text style={styles.empresaIconText}>
@@ -238,32 +245,29 @@ export default function AdminDashboardScreen() {
                     </View>
                     <View style={{flex: 1}}>
                       <Text style={styles.empresaTitle}>{emp.nombreCompleto}</Text>
-                      <Text style={styles.empresaEmail}>{emp.correo}</Text>
+                      <Text style={styles.empresaEmail}>{emp.correo.toLowerCase()}</Text>
                     </View>
                     <View style={styles.statusBadge}>
-                        <Text style={styles.statusText}>Activa</Text>
+                        <View style={styles.statusDot} />
+                        <Text style={styles.statusText}>LIVE</Text>
                     </View>
                 </View>
 
-                <View style={styles.divider} />
-
-                <View style={styles.statsRow}>
+                <View style={styles.statsContainer}>
                     <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Puntos</Text>
+                        <Text style={styles.statLabel}>PUNTOS</Text>
                         <Text style={styles.statNumberGreen}>{emp.totalPuntos}</Text>
                     </View>
-                    <View style={styles.verticalDivider} />
                     <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Escaneos</Text>
+                        <Text style={styles.statLabel}>ESCANEOS</Text>
                         <Text style={styles.statNumberOrange}>{emp.totalScans}</Text>
                     </View>
-                    <View style={styles.verticalDivider} />
                     <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Clientes</Text>
+                        <Text style={styles.statLabel}>CLIENTES</Text>
                         <Text style={styles.statNumberBlue}>{emp.clientesUnicos}</Text>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
           ))
         )}
 
@@ -274,35 +278,102 @@ export default function AdminDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 15, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0', zIndex: 10 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#000b76' },
-  headerBtn: { padding: 5 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  // --- HEADER ---
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 20, 
+    paddingBottom: 20, 
+    backgroundColor: COLORS.background,
+  },
+  headerSubtitle: { fontFamily: FONTS.textBold, fontSize: 10, color: COLORS.accent, letterSpacing: 3, marginBottom: 2 },
+  headerTitle: { fontFamily: FONTS.title, fontSize: 20, color: COLORS.text },
+  headerBtn: { 
+    padding: 10, 
+    backgroundColor: COLORS.cardBg, 
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  
   scrollContent: { padding: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 5, marginTop: 10 },
-  subtitle: { fontSize: 13, color: '#666', marginBottom: 15 },
-  kpiContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  kpiFullRow: { marginBottom: 25 },
-  kpiCard: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 15, flexDirection: 'row', alignItems: 'center', marginHorizontal: 5, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 3 },
-  iconContainer: { width: 45, height: 45, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  kpiValue: { fontSize: 20, fontWeight: 'bold', color: '#333' },
-  kpiTitle: { fontSize: 12, color: '#666', fontWeight: '500' },
-  empresaCard: { backgroundColor: '#ffffff', borderRadius: 16, marginBottom: 15, padding: 0, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: '#f0f0f0' },
-  empresaHeader: { flexDirection: 'row', alignItems: 'center', padding: 15 },
-  empresaIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#000b76', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  empresaIconText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  empresaTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  empresaEmail: { fontSize: 12, color: '#888' },
-  statusBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  statusText: { color: '#2E7D32', fontSize: 10, fontWeight: 'bold' },
-  divider: { height: 1, backgroundColor: '#f0f0f0', width: '100%' },
-  statsRow: { flexDirection: 'row', padding: 15, justifyContent: 'space-around', alignItems: 'center' },
+  sectionTitle: { fontFamily: FONTS.textBold, fontSize: 12, color: COLORS.textSec, letterSpacing: 1.5, marginBottom: 15 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 5 },
+  countBadge: { backgroundColor: COLORS.border, paddingHorizontal: 8, py: 2, borderRadius: 6, marginLeft: 10, marginBottom: 15 },
+  countText: { color: COLORS.text, fontSize: 10, fontFamily: FONTS.textBold },
+
+  // --- KPI CARDS ---
+  kpiGrid: { marginBottom: 25 },
+  kpiRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  kpiFullRow: { width: '100%' },
+  kpiCard: { 
+    flex: 1, 
+    backgroundColor: COLORS.cardBg, 
+    borderRadius: 20, 
+    padding: 18, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  iconContainer: { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 15, borderWidth: 1 },
+  kpiValue: { fontSize: 22, fontFamily: FONTS.title },
+  kpiTitle: { fontSize: 9, color: COLORS.textSec, fontFamily: FONTS.textBold, letterSpacing: 1, marginTop: 2 },
+  
+  // --- EMPRESA CARDS ---
+  empresaCard: { 
+    backgroundColor: COLORS.cardBg, 
+    borderRadius: 24, 
+    marginBottom: 16, 
+    borderWidth: 1, 
+    borderColor: COLORS.border,
+    overflow: 'hidden'
+  },
+  empresaHeader: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingBottom: 15 },
+  empresaIcon: { 
+    width: 46, 
+    height: 46, 
+    borderRadius: 14, 
+    backgroundColor: 'rgba(255,255,255,0.03)', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 15, 
+    borderWidth: 1, 
+    borderColor: COLORS.border 
+  },
+  empresaIconText: { color: COLORS.accent, fontFamily: FONTS.title, fontSize: 18 },
+  empresaTitle: { fontSize: 16, fontFamily: FONTS.title, color: COLORS.text },
+  empresaEmail: { fontSize: 12, fontFamily: FONTS.textRegular, color: COLORS.textSec, marginTop: 2 },
+  
+  statusBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(1, 195, 142, 0.1)', 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(1, 195, 142, 0.2)'
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accent, marginRight: 5 },
+  statusText: { color: COLORS.accent, fontSize: 9, fontFamily: FONTS.textBold },
+
+  statsContainer: { 
+    flexDirection: 'row', 
+    backgroundColor: 'rgba(255,255,255,0.02)', 
+    paddingVertical: 15, 
+    borderTopWidth: 1, 
+    borderTopColor: COLORS.border 
+  },
   statItem: { alignItems: 'center', flex: 1 },
-  statLabel: { fontSize: 11, color: '#888', marginBottom: 4, textTransform: 'uppercase' },
-  statNumberGreen: { fontSize: 18, fontWeight: 'bold', color: '#00C853' },
-  statNumberOrange: { fontSize: 18, fontWeight: 'bold', color: '#FF6D00' },
-  statNumberBlue: { fontSize: 18, fontWeight: 'bold', color: '#2962FF' },
-  verticalDivider: { width: 1, height: 30, backgroundColor: '#f0f0f0' },
-  emptyState: { alignItems: 'center', marginTop: 40 },
-  emptyText: { color: '#999', marginTop: 10 }
+  statLabel: { fontSize: 9, color: COLORS.textSec, fontFamily: FONTS.textBold, marginBottom: 4, letterSpacing: 0.5 },
+  statNumberGreen: { fontSize: 18, fontFamily: FONTS.title, color: COLORS.accent },
+  statNumberOrange: { fontSize: 18, fontFamily: FONTS.title, color: '#FF6D00' },
+  statNumberBlue: { fontSize: 18, fontFamily: FONTS.title, color: '#4F9CF9' },
+
+  emptyState: { alignItems: 'center', marginTop: 60, opacity: 0.5 },
+  emptyText: { color: COLORS.textSec, marginTop: 15, fontFamily: FONTS.textMedium }
 });

@@ -1,18 +1,46 @@
+import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
-import { Alert, ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-// Importaciones de Firebase Auth
 import { reload, signInWithEmailAndPassword } from 'firebase/auth';
+import { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from '../../src/firebaseConfig';
 
-// Define las URLs de tus APIs
+// --- PALETA QRONNOS ---
+const COLORS = {
+    background: '#0f1115', 
+    cardBg: '#181b21',     
+    accent: '#01c38e',     
+    text: '#ffffff',       
+    textSec: '#8b9bb4',    
+    border: '#232936'      
+};
+
+// --- CONSTANTES DE FUENTES ---
+const FONTS = {
+    title: 'Heavitas',
+    textRegular: 'Poppins-Regular',
+    textMedium: 'Poppins-Medium',
+    textBold: 'Poppins-Bold'
+};
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
+const { width, height } = Dimensions.get('window');
 
-// Componente Footer para QRONNOS
 const QronnosFooter = () => (
     <View style={styles.footerContainer}>
         <Text style={styles.footerText}>QRONNOS</Text>
@@ -21,11 +49,69 @@ const QronnosFooter = () => (
 
 export default function HomeScreen() {
     const safeareaInsets = useSafeAreaInsets();
-    const fondo = require('../../assets/images/wave.png');
-    const router = useRouter() 
+    const router = useRouter();
     
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    
+    // --- ESTADOS DE ANIMACIÓN ---
+    const [splashVisible, setSplashVisible] = useState(true);
+    const splashOpacity = useRef(new Animated.Value(1)).current;
+    const logoScale = useRef(new Animated.Value(0.8)).current; // Empieza un poco pequeño
+    const loginOpacity = useRef(new Animated.Value(0)).current; // El login empieza invisible
+
+    // CARGA DE FUENTES
+    const [fontsLoaded] = useFonts({
+        'Heavitas': require('../../assets/fonts/Heavitas.ttf'),
+        'Poppins-Regular': require('../../assets/fonts/Poppins-Regular.ttf'),
+        'Poppins-Medium': require('../../assets/fonts/Poppins-Medium.ttf'),
+        'Poppins-Bold': require('../../assets/fonts/Poppins-Bold.ttf'),
+    });
+
+    // --- EFECTO DE ANIMACIÓN DE ENTRADA ---
+    useEffect(() => {
+        if (fontsLoaded) {
+            Animated.sequence([
+                // 1. Entrada del logo (Fade In + Zoom suave)
+                Animated.parallel([
+                    Animated.timing(splashOpacity, {
+                        toValue: 1,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.spring(logoScale, {
+                        toValue: 1,
+                        friction: 6,
+                        tension: 40,
+                        useNativeDriver: true,
+                    })
+                ]),
+                // 2. Pausa para ver el logo
+                Animated.delay(1500),
+                // 3. Salida del Splash y entrada del Login
+                Animated.parallel([
+                    Animated.timing(splashOpacity, {
+                        toValue: 0,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(logoScale, {
+                        toValue: 1.5, // Efecto de zoom hacia la cámara al salir
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(loginOpacity, {
+                        toValue: 1,
+                        duration: 800,
+                        useNativeDriver: true,
+                    })
+                ])
+            ]).start(() => {
+                setSplashVisible(false); // Desmontar visualmente el splash al terminar
+            });
+        }
+    }, [fontsLoaded]);
 
     useEffect(() => {
         async function checkUserIdAndRedirect() {
@@ -34,276 +120,306 @@ export default function HomeScreen() {
                 const empresaId = await SecureStore.getItemAsync('empresa_id'); 
 
                 if (userId || empresaId) {
-                    console.log(`Sesión encontrada. Redirigiendo...`);
+                    // Si ya hay sesión, redirigimos. 
+                    // Nota: La animación se cortará si el router reemplaza la pantalla, lo cual es deseable para usuarios logueados.
                     router.replace('/(tabs)/dashboard');
-                } else {
-                    console.log('User ID no encontrado. Permaneciendo en la pantalla.');
                 }
             } catch (error) {
-                console.error('Error al acceder a SecureStore o al navegar:', error);
+                console.error('Error al acceder a SecureStore:', error);
             }
         }
         checkUserIdAndRedirect();
     }, []);
 
-    function navigateToRegister() {
-        router.push('/(tabs)/account/register');
-    }
-
     async function handleLogin() {
-    console.log("Login function called");
-    console.log("Email:", email);
-    
-    try {
-        // --- 1. OBTENER EL PUSH TOKEN (ANTES DE TODO) ---
-        let expoToken = null;
-        try {
-            const projectId = process.env.EXPO_PUBLIC_PROJECT_ID; 
-            if (projectId) {
-                const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-                expoToken = tokenData.data;
-                console.log("Push Token generado:", expoToken);
-            }
-        } catch (e) {
-            console.log("Error al obtener token de notificaciones:", e);
-            // No bloqueamos el login si el token falla
-        }
-
-        // --- 2. AUTENTICACIÓN FIREBASE ---
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        await reload(user); 
-        
-        if (!user.emailVerified) {
-            Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
+        if (!email || !password) {
+            Alert.alert("Campos vacíos", "Por favor ingresa tus credenciales.");
             return;
         }
-
-        if(!expoToken){
-            await SecureStore.getItemAsync('expoPushToken').then(token => {
-                expoToken = token;
-            });
-            console.log("Usando token almacenado:", expoToken);
-            // console.log("No se obtuvo el Push Token, pero se continúa con el login.");
-        }
-
-        // --- 3. LLAMADA AL BACKEND (Incluimos pushToken en el body) ---
-        const response = await fetch(LOGIN_CLIENTE_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                email: email, 
-                password: password,
-                pushToken: expoToken // <--- Enviamos el token aquí
-            }),
-        });
-
-        const data = await response.json();
         
-        if(response.ok && data.code === 200) {
-            Alert.alert("Inicio de Sesión Exitoso", `Bienvenido/a de vuelta, ${data.cliente || data.empresa}!` );
+        setIsLoggingIn(true);
+        try {
+            let expoToken = null;
+            try {
+                const projectId = process.env.EXPO_PUBLIC_PROJECT_ID; 
+                if (projectId) {
+                    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+                    expoToken = tokenData.data;
+                }
+            } catch (e) {
+                console.log("Error push token:", e);
+            }
+
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            await reload(user); 
             
-            const nombreCliente = data.cliente;
-            const nombreEmpresa = data.empresa;
-            const userId = data.token; 
-            const empresaId = data.token_empresa;
-            const jwt = data.jwt;
-            const rol = data.rol;
-
-            if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
-            if (rol) await SecureStore.setItemAsync('rol', String(rol));
-
-            if (userId) {
-                await SecureStore.setItemAsync('user_id', String(userId));
-                await SecureStore.setItemAsync('nameCliente', String(nombreCliente));
+            if (!user.emailVerified) {
+                Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
+                setIsLoggingIn(false);
+                return;
             }
 
-            if(empresaId){
-                await SecureStore.setItemAsync('empresa_id', String(empresaId));
-                await SecureStore.setItemAsync('nameEmpresa', String(nombreEmpresa));
+            const response = await fetch(LOGIN_CLIENTE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    email: email.trim(), 
+                    password: password,
+                    pushToken: expoToken 
+                }),
+            });
+
+            const data = await response.json();
+            
+            if(response.ok && data.code === 200) {
+                const { token, token_empresa, jwt, rol, cliente, empresa } = data;
+
+                if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
+                if (rol) await SecureStore.setItemAsync('rol', String(rol));
+
+                if (token) {
+                    await SecureStore.setItemAsync('user_id', String(token));
+                    await SecureStore.setItemAsync('nameCliente', String(cliente));
+                }
+
+                if(token_empresa){
+                    await SecureStore.setItemAsync('empresa_id', String(token_empresa));
+                    await SecureStore.setItemAsync('nameEmpresa', String(empresa));
+                }
+
+                router.replace('/(tabs)/dashboard'); 
+            
+            } else {
+                Alert.alert("Error", data.message || "Credenciales incorrectas.");
             }
 
-            router.replace('/(tabs)/dashboard'); 
-        
-        } else {
-            Alert.alert("Error de Datos", data.message || "Credenciales válidas, pero datos del perfil incompletos.");
+        } catch (error: any) {
+            Alert.alert("Error de Acceso", "Correo o contraseña incorrecta.");
+        } finally {
+            setIsLoggingIn(false);
         }
-
-    } catch (error: any) {
-        console.error("Error en el login:", error);
-        let errorMessage = "Ocurrió un error al intentar iniciar sesión.";
-        if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            errorMessage = "Correo o contraseña incorrecta.";
-        } 
-        Alert.alert("Error de Inicio de Sesión", errorMessage);
     }
-}
+
+    if (!fontsLoaded) {
+        return (
+            <View style={{ flex: 1, backgroundColor: COLORS.background, justifyContent: 'center' }}>
+                <ActivityIndicator color={COLORS.accent} />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.fullContainer}>
-           <View style={{ paddingTop: safeareaInsets.top, ...styles.containerLogin }}>
-                
-                <Text style={styles.Titulo}>Inicia Sesión</Text>
-                
-                {/* Caja de Email con Sombra */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Correo Electrónico"
-                        placeholderTextColor="#7D7D7D" 
-                        style={styles.TextInput}
-                        value={email} 
-                        onChangeText={setEmail} 
-                        keyboardType="email-address" 
-                        autoCapitalize="none"
-                    /> 
-                </View>
-                
-                {/* Caja de Password con Sombra */}
-                <View style={styles.inputShadowContainer}>
-                    <TextInput
-                        placeholder="Contraseña"
-                        placeholderTextColor="#7D7D7D" 
-                        style={styles.TextInput}
-                        value={password} 
-                        onChangeText={setPassword} 
-                        secureTextEntry={true} 
-                    /> 
-                </View>
-                
-                <TouchableOpacity onPress={navigateToRegister}>
-                    <Text style={styles.textRegister}>¿Aún no tienes cuenta? <Text style={{fontWeight: 'bold', color: '#000b76'}}>Regístrate</Text></Text>
-                </TouchableOpacity>
-                
-                {/* Botón con Sombra Levantada */}
-                <TouchableOpacity onPress={handleLogin} style={styles.button}>
-                    <Text style={styles.textButton}>INGRESAR</Text>
-                </TouchableOpacity>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            
+            {/* --- CONTENIDO DEL LOGIN (Animado con opacidad) --- */}
+            <Animated.View style={[styles.loginContentWrapper, { opacity: loginOpacity }]}>
+                <View style={{ paddingTop: safeareaInsets.top + 80, ...styles.containerLogin }}>
+                    
+                    <Text style={styles.welcomeText}>BIENVENIDO A</Text>
+                    <Text style={styles.Titulo}>INICIAR <Text style={{color: COLORS.accent}}>SESIÓN</Text></Text>
+                    <Text style={styles.Subtitulo}>Accede a tu ecosistema de beneficios</Text>
+                    
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+                        <View style={styles.inputShadowContainer}>
+                            <TextInput
+                                placeholder="ejemplo@qronnos.com"
+                                placeholderTextColor="rgba(255,255,255,0.2)" 
+                                style={styles.TextInput}
+                                value={email} 
+                                onChangeText={setEmail} 
+                                keyboardType="email-address" 
+                                autoCapitalize="none"
+                            /> 
+                        </View>
+                    </View>
+                    
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>CONTRASEÑA</Text>
+                        <View style={styles.inputShadowContainer}>
+                            <TextInput
+                                placeholder="********"
+                                placeholderTextColor="rgba(255,255,255,0.2)" 
+                                style={styles.TextInput}
+                                value={password} 
+                                onChangeText={setPassword} 
+                                secureTextEntry={true} 
+                            /> 
+                        </View>
+                    </View>
+                    
+                    <TouchableOpacity onPress={() => router.push('/(tabs)/account/register')} style={styles.registerLink}>
+                        <Text style={styles.textRegister}>
+                            ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate aquí</Text>
+                        </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        onPress={handleLogin} 
+                        style={[styles.button, isLoggingIn && { opacity: 0.7 }]}
+                        disabled={isLoggingIn}
+                    >
+                        {isLoggingIn ? (
+                            <ActivityIndicator color="#000" />
+                        ) : (
+                            <Text style={styles.textButton}>INGRESAR</Text>
+                        )}
+                    </TouchableOpacity>
 
-           </View>
-           
-           <ImageBackground source={fondo} style={styles.background} resizeMode="cover" />
-           
-           {/* Cartel QRONNOS */}
-           <QronnosFooter />
+                </View>
+                
+                <QronnosFooter />
+            </Animated.View>
+
+            {/* --- CAPA DE ANIMACIÓN SPLASH (Se superpone) --- */}
+            {splashVisible && (
+                <Animated.View 
+                    pointerEvents="none" 
+                    style={[
+                        styles.splashContainer, 
+                        { opacity: splashOpacity }
+                    ]}
+                >
+                    <Animated.Image 
+                        source={require('../../assets/images/animacionInicio.png')} 
+                        style={[
+                            styles.splashImage,
+                            { transform: [{ scale: logoScale }] }
+                        ]}
+                        resizeMode="contain"
+                    />
+                </Animated.View>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     fullContainer: {
-        backgroundColor: '#ffffff',
+        backgroundColor: COLORS.background,
         flex: 1,
     },
-    Titulo: {
-        fontSize: 32,
-        fontWeight: '800', 
-        color: '#000b76', 
-        textAlign: 'center',
-        marginBottom: 30,
-        letterSpacing: 0.5,
+    loginContentWrapper: {
+        flex: 1, // Ocupa todo el espacio
     },
-    containerLogin: {
-        marginTop: "35%", 
-        paddingHorizontal: 30, 
-    },
-    
-    // ESTILO DE SOMBRA LEVANTADA PARA INPUTS
-    inputShadowContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 15,
-        marginBottom: 20,
-        width: "100%",
-        height: 55,
+    // --- ESTILOS DE LA ANIMACIÓN ---
+    splashContainer: {
+        ...StyleSheet.absoluteFillObject, // Cubre toda la pantalla
+        backgroundColor: COLORS.background,
         justifyContent: 'center',
-        
-        // Sombra iOS
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-        
-        // Sombra Android (Elevation)
-        elevation: 8, 
+        alignItems: 'center',
+        zIndex: 100, // Se asegura de estar encima de todo
+    },
+    splashImage: {
+        width: width * 0.6, // 60% del ancho de la pantalla
+        height: width * 0.6,
+    },
+    // -----------------------------
+    containerLogin: {
+        paddingHorizontal: 35, 
+    },
+    welcomeText: {
+        fontFamily: FONTS.textBold,
+        fontSize: 12,
+        color: COLORS.accent,
+        textAlign: 'center',
+        letterSpacing: 4,
+        marginBottom: 5
+    },
+    Titulo: {
+        fontSize: 28,
+        fontFamily: FONTS.title, 
+        color: COLORS.text, 
+        textAlign: 'center',
+    },
+    Subtitulo: {
+        fontSize: 14,
+        fontFamily: FONTS.textRegular,
+        color: COLORS.textSec,
+        textAlign: 'center',
+        marginTop: 10,
+        marginBottom: 50,
+    },
+    inputWrapper: {
+        marginBottom: 25,
+    },
+    label: {
+        color: COLORS.text,
+        fontSize: 10,
+        fontFamily: FONTS.textBold,
+        marginBottom: 10,
+        marginLeft: 5,
+        letterSpacing: 1.5,
+        opacity: 0.6
+    },
+    inputShadowContainer: {
+        backgroundColor: COLORS.cardBg,
+        borderRadius: 16,
+        width: "100%",
+        height: 60,
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
     TextInput: {
         flex: 1,
         paddingHorizontal: 20,
-        fontSize: 16,
-        color: '#333333',
-        borderRadius: 15, 
+        fontSize: 15,
+        fontFamily: FONTS.textMedium,
+        color: COLORS.text,
     },
-
-    textRegister: {
+    registerLink: {
         marginTop: 10,
-        textAlign: 'center',
-        color: '#666',
-        fontSize: 14,
+        alignSelf: 'center'
     },
-
-    // ESTILO DE BOTÓN CON SOMBRA LEVANTADA
+    textRegister: {
+        color: COLORS.textSec,
+        fontFamily: FONTS.textRegular,
+        fontSize: 13,
+    },
+    linkAccent: {
+        fontFamily: FONTS.textBold,
+        color: COLORS.accent,
+    },
     button: {
-        backgroundColor: "#000b76",
+        backgroundColor: COLORS.accent,
         width: "100%", 
         height: 60, 
-        marginTop: 30,
-        borderRadius: 15,
+        marginTop: 40,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 40, // Espacio antes de llegar al borde inferior/footer
-
-        // Sombra iOS
-        shadowColor: "#000b76", 
-        shadowOffset: {
-            width: 0,
-            height: 8,
-        },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-
-        // Sombra Android
+        shadowColor: COLORS.accent,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
         elevation: 10,
     },
     textButton: {
-        textAlign: "center",
-        color: "#ffffff",
-        fontSize: 18,
-        fontWeight: 'bold',
-        letterSpacing: 1,
+        color: "#000",
+        fontSize: 15,
+        fontFamily: FONTS.title,
     },
-
-    background: {
-        backgroundColor: '#ffffff',
-        flex: 1,
-        zIndex: -1,
-        position: 'absolute',
-        top: "60%", // Ajustado para el footer
-        width: '100%',
-        height: '100%',
-        opacity: 0.8,
-    },
-    
-    // 🔥 ESTILOS PARA EL CARTEL QRONNOS (Efecto Neón)
     footerContainer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: 70, // Altura del cartel
-        backgroundColor: '#000b76', // Fondo azul oscuro
+        height: 100,
         justifyContent: 'center',
         alignItems: 'center',
     },
     footerText: {
-        fontSize: 35,
-        fontWeight: '900',
-        color: '#FFFFFF', // Texto en blanco brillante
-        letterSpacing: 8,
-        textShadowColor: 'rgba(45, 156, 219, 0.9)', // Sombra azul brillante para el efecto neón
+        fontSize: 34,
+        fontFamily: FONTS.title,
+        color: COLORS.accent,
+        letterSpacing: 15,
+        // --- NEÓN BRILLANTE ---
+        textShadowColor: COLORS.accent,
         textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10, 
+        textShadowRadius: 15,
+        elevation: 10,
     }
 });

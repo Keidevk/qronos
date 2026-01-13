@@ -1,13 +1,30 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font'; // Importante para las fuentes
 import { useNavigation } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+import { ActivityIndicator, Dimensions, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-/**
- * Hook que valida acceso según:
- * - empresa_id → autorizado
- * - user_id sin empresa_id → acceso NO autorizado
- */
+const { width } = Dimensions.get('window');
+
+// --- PALETA QRONNOS (Sincronizada con Dashboard) ---
+const COLORS = {
+  background: '#0f1115',
+  cardBg: '#181b21',
+  accent: '#01c38e',
+  text: '#ffffff',
+  textSec: '#8b9bb4',
+  border: '#232936'
+};
+
+// --- CONSTANTES DE FUENTES ---
+const FONTS = {
+  title: 'Heavitas',
+  textRegular: 'Poppins-Regular',
+  textMedium: 'Poppins-Medium',
+  textBold: 'Poppins-Bold'
+};
+
 const useEmpresaCheck = () => {
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -49,13 +66,18 @@ const useEmpresaCheck = () => {
 export default function CompanyScreen() {
     const navigator = useNavigation();
     const { isAuthorized, isLoading, errorMessage } = useEmpresaCheck();
-    const scheme = useColorScheme();
-    const dark = scheme === "dark";
 
     const [totalScans, setTotalScans] = useState<number | null>(null);
     const [totalPoints, setTotalPoints] = useState<number | null>(null);
 
-    // Traer métricas de la empresa
+    // Carga de fuentes
+    const [fontsLoaded] = useFonts({
+        'Heavitas': require('../../../assets/fonts/Heavitas.ttf'),
+        'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
+        'Poppins-Medium': require('../../../assets/fonts/Poppins-Medium.ttf'),
+        'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
+    });
+
     useEffect(() => {
         const fetchMetrics = async () => {
             try {
@@ -63,20 +85,15 @@ export default function CompanyScreen() {
                 if (!empresaId) return;
 
                 const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/metricas/empresa/${empresaId}`);
-                
-                // Corrección: El backend devuelve un array directo []
                 const metricas = await response.json();
 
                 if (Array.isArray(metricas)) {
-                    // Sumar todas las vecesScan (convertido a Number por seguridad)
                     const scans = metricas.reduce((acc: number, m: any) => acc + (Number(m.vecesScan) || 0), 0);
                     setTotalScans(scans);
 
-                    // Sumar todos los puntos (convertido a Number por seguridad)
                     const points = metricas.reduce((acc: number, m: any) => acc + (Number(m.puntos) || 0), 0);
                     setTotalPoints(points);
                 } else {
-                    // En caso de que no sea un array o venga vacío
                     setTotalScans(0);
                     setTotalPoints(0);
                 }
@@ -89,11 +106,11 @@ export default function CompanyScreen() {
         if (isAuthorized) fetchMetrics();
     }, [isAuthorized]);
 
-    if (isLoading) {
+    if (!fontsLoaded || isLoading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#fff" />
-                <Text style={[styles.subText, { marginTop: 15 }]}>Verificando acceso...</Text>
+                <ActivityIndicator size="large" color={COLORS.accent} />
+                <Text style={[styles.subText, { marginTop: 15, fontFamily: FONTS.textMedium }]}>Verificando acceso...</Text>
             </View>
         );
     }
@@ -101,7 +118,8 @@ export default function CompanyScreen() {
     if (!isAuthorized) {
         return (
             <View style={styles.centerContainer}>
-                <Text style={styles.textBase}>🚫 Acceso Denegado</Text>
+                <Ionicons name="lock-closed-outline" size={60} color={COLORS.accent} style={{marginBottom: 20}} />
+                <Text style={styles.textBase}>ACCESO DENEGADO</Text>
                 <Text style={styles.subText}>
                     {errorMessage || "No tienes permisos para acceder a este módulo."}
                 </Text>
@@ -110,90 +128,170 @@ export default function CompanyScreen() {
     }
 
     return (
-        <View style={[styles.companyContainer, { backgroundColor: dark ? "#0D0D0D" : "#F3F4F6" }]}>
-            <TouchableOpacity 
-                onPress={() => (navigator as any).openDrawer()}
-                style={{ position: "absolute", top: 50, right: 20, zIndex: 20 }}
-            >
-                <Text style={{ fontSize: 30, color: dark ? "#fff" : "#000" }}>☰</Text>
-            </TouchableOpacity>
+        <View style={styles.companyContainer}>
+            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            
+            {/* HEADER */}
+            <View style={styles.headerRow}>
+                <View>
+                    <Text style={styles.welcomeText}>ESTADÍSTICAS</Text>
+                    <Text style={styles.header}>
+                        PANEL DE <Text style={{color: COLORS.accent}}>EMPRESA</Text>
+                    </Text>
+                </View>
 
-            <Text style={[styles.header, { top: 40, color: dark ? "#FFFFFF" : "#1F2937" }]}>
-                Panel de Empresa
-            </Text>
+                <TouchableOpacity 
+                    onPress={() => (navigator as any).openDrawer()}
+                    style={styles.iconButton}
+                >
+                    <Ionicons name="grid-outline" size={24} color={COLORS.text} />
+                </TouchableOpacity>
+            </View>
 
-            <View style={{ marginTop: 150 }}>
+            <View style={{ marginTop: 40 }}>
                 {/* Visualización de Puntos */}
-                <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1, marginBottom: 15 }]}>
-                    <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
-                        Total de puntos otorgados
-                    </Text>
-                    <Text style={[styles.scanNumber, { color: "#10B981" }]}>
-                        {totalPoints !== null ? totalPoints : "Cargando..."}
-                    </Text>
+                <View style={styles.card}>
+                    <View style={styles.iconCircle}>
+                         <Ionicons name="gift-outline" size={26} color={COLORS.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.smallTitle}>Puntos otorgados</Text>
+                        <Text style={[styles.scanNumber, { color: COLORS.accent }]}>
+                            {totalPoints !== null ? totalPoints : "0"}
+                        </Text>
+                    </View>
+                    <Ionicons name="trending-up" size={20} color={COLORS.accent} style={{ opacity: 0.5 }} />
                 </View>
 
                 {/* Visualización de Escaneos */}
-                <View style={[styles.card, { backgroundColor: dark ? "#1A1A1A" : "#FFFFFF", shadowOpacity: dark ? 0 : 0.1 }]}>
-                    <Text style={[styles.smallTitle, { color: dark ? "#AAAAAA" : "#6B7280" }]}>
-                        Total de escaneos
-                    </Text>
-                    <Text style={[styles.scanNumber, { color: dark ? "#4F9CF9" : "#2563EB" }]}>
-                        {totalScans !== null ? totalScans : "Cargando..."}
-                    </Text>
+                <View style={styles.card}>
+                    <View style={[styles.iconCircle, { borderColor: '#4F9CF9', backgroundColor: 'rgba(79, 156, 249, 0.1)' }]}>
+                         <Ionicons name="qr-code-outline" size={26} color="#4F9CF9" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.smallTitle}>Total escaneos</Text>
+                        <Text style={[styles.scanNumber, { color: '#4F9CF9' }]}>
+                            {totalScans !== null ? totalScans : "0"}
+                        </Text>
+                    </View>
+                    <Ionicons name="stats-chart" size={20} color="#4F9CF9" style={{ opacity: 0.5 }} />
                 </View>
+            </View>
+
+            <View style={styles.infoBox}>
+                <Ionicons name="information-circle-outline" size={20} color={COLORS.textSec} />
+                <Text style={styles.infoText}>
+                    Estos datos reflejan la actividad total de los clientes identificados mediante Qronnos en tu establecimiento.
+                </Text>
             </View>
         </View>
     );
 }
 
-/* ------------------ ESTILOS ------------------ */
 const styles = StyleSheet.create({
     centerContainer: {
         flex: 1, 
-        backgroundColor: '#000', 
+        backgroundColor: COLORS.background, 
         justifyContent: 'center', 
         alignItems: 'center', 
         padding: 20 
     },
     textBase: {
-         color: '#fff', 
+         color: COLORS.text, 
          fontSize: 22, 
-         fontWeight: 'bold', 
+         fontFamily: FONTS.title,
          marginBottom: 10 
     },
     subText: { 
-        color: '#aaa', 
-        fontSize: 16, 
-        textAlign: 'center' 
+        color: COLORS.textSec, 
+        fontSize: 15, 
+        textAlign: 'center',
+        fontFamily: FONTS.textRegular,
+        lineHeight: 22
     },
     companyContainer: {
          flex: 1, 
-         padding: 20,
+         padding: 24,
+         backgroundColor: COLORS.background
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginTop: 50,
+    },
+    welcomeText: {
+        fontFamily: FONTS.textBold,
+        fontSize: 10,
+        color: COLORS.accent,
+        letterSpacing: 3,
+        marginBottom: 4
     },
     header: { 
-        fontSize: 26, 
-        fontWeight: "bold", 
-        marginBottom: 20, 
-        marginTop: 40, 
-        textAlign: "center" 
+        fontSize: 24, 
+        fontFamily: FONTS.title,
+        color: COLORS.text,
+        textAlign: "left",
+    },
+    iconButton: { 
+        padding: 10, 
+        backgroundColor: COLORS.cardBg, 
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: COLORS.border
     },
     card: { 
-        backgroundColor: "#fff", 
-        padding: 18, 
-        borderRadius: 20, 
+        backgroundColor: COLORS.cardBg, 
+        padding: 24, 
+        borderRadius: 24, 
         shadowColor: "#000", 
-        shadowOpacity: 0.1, 
-        shadowRadius: 8, 
-        elevation: 4, 
-        marginBottom: 25,
+        shadowOpacity: 0.3, 
+        shadowRadius: 15, 
+        shadowOffset: {width: 0, height: 8},
+        elevation: 8, 
+        marginBottom: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border
+    },
+    iconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: COLORS.accent,
+        backgroundColor: 'rgba(1, 195, 142, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 20
     },
     smallTitle: { 
-        fontSize: 16 
+        fontSize: 11,
+        color: COLORS.textSec,
+        fontFamily: FONTS.textBold,
+        textTransform: 'uppercase',
+        letterSpacing: 1
     },
     scanNumber: { 
-        fontSize: 42, 
-        fontWeight: "bold", 
-        marginTop: 3 
+        fontSize: 32, 
+        fontFamily: FONTS.title,
+        marginTop: 2 
     },
+    infoBox: {
+        marginTop: 20,
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        padding: 16,
+        borderRadius: 16,
+        alignItems: 'center'
+    },
+    infoText: {
+        flex: 1,
+        marginLeft: 12,
+        color: COLORS.textSec,
+        fontSize: 12,
+        fontFamily: FONTS.textRegular,
+        lineHeight: 18
+    }
 });

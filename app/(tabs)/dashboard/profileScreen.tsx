@@ -1,266 +1,327 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font'; // Importante para las fuentes
 import { useFocusEffect, useNavigation } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useState } from "react";
-// Importamos ActivityIndicator para mostrar carga (manteniendo tus estilos de View)
-import { ActivityIndicator, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
 import {
-  QrCodeSvg
-} from 'react-native-qr-svg';
+  ActivityIndicator,
+  Dimensions,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { QrCodeSvg } from 'react-native-qr-svg';
 
-// --- 2. PANTALLA PERFIL ---
+const { width } = Dimensions.get('window');
+
+// --- PALETA QRONNOS ---
+const COLORS = {
+  background: '#0f1115', // Ajustado al Dashboard
+  cardBg: '#181b21',     // Ajustado al Dashboard
+  accent: '#01c38e',
+  text: '#ffffff',
+  textSec: '#8b9bb4',
+  border: '#232936',
+};
+
+// --- CONSTANTES DE FUENTES ---
+const FONTS = {
+  title: 'Heavitas',
+  textRegular: 'Poppins-Regular',
+  textMedium: 'Poppins-Medium',
+  textBold: 'Poppins-Bold'
+};
+
 export default function ProfileScreen() {
-  const navigator = useNavigation();
-  // Inicializamos con string vacíos para evitar problemas de tipo.
-  const [userIdState, setUserIdState] = useState('');
+  const navigator: any = useNavigation();
   const [nombreClienteState, setNameClienteState] = useState('');
   const [qrData, setQrData] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Maneja el estado de carga
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  /**
-   * 🔄 useFocusEffect: Se ejecuta cada vez que la pestaña gana foco.
-   */
+  // Carga de fuentes
+  const [fontsLoaded] = useFonts({
+    'Heavitas': require('../../../assets/fonts/Heavitas.ttf'),
+    'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
+    'Poppins-Medium': require('../../../assets/fonts/Poppins-Medium.ttf'),
+    'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
+  });
+
   useFocusEffect(
     useCallback(() => {
-        let jwt = '';
-
-      // Función principal que orquesta la carga de datos y la generación del QR
       async function loadUserDataAndGenerateQr() {
-        // 1. Iniciar la carga y limpiar datos anteriores
         setIsLoading(true);
+        setHasError(false);
         setQrData('');
-        setUserIdState('');
 
-        let secureUserId = ''; // Variable local para pasar el ID inmediatamente
-        let secureNameCliente = '';
         try {
-          // --- 1. OBTENER DATOS DE SECURESTORE ---
-          secureUserId = await SecureStore.getItemAsync('user_id') || '';
-          secureNameCliente = await SecureStore.getItemAsync('nameCliente') || '';
-          jwt = await SecureStore.getItemAsync('jwt') || '';
+          const secureUserId = await SecureStore.getItemAsync('user_id') || '';
+          const secureNameCliente = await SecureStore.getItemAsync('nameCliente') || '';
+          const jwt = await SecureStore.getItemAsync('jwt') || '';
 
-          console.log("Datos obtenidos de SecureStore:",jwt)
-
-          // Actualizar estados
-          setUserIdState(secureUserId);
           setNameClienteState(secureNameCliente);
 
-          if (secureUserId) {
-            console.log(`User ID encontrado: ${secureUserId}. Procediendo a generar QR.`);
-            // --- 2. LLAMAR A LA API PARA GENERAR EL QR (usando la variable local) ---
-            await FetchQrData(secureUserId);
+          if (secureUserId && jwt) {
+            await fetchQrData(secureUserId, jwt);
           } else {
-            console.log('User ID no encontrado. No se genera QR.');
+            setHasError(true);
           }
-
         } catch (error) {
-          console.error('Error general en el flujo de QR/SecureStore:', error);
-          setQrData('');
-          setUserIdState('');
+          console.error('Error:', error);
+          setHasError(true);
         } finally {
-          // 3. Finalizar la carga
           setIsLoading(false);
         }
       }
 
-      /**
-       * Función para generar el QR mediante llamada a la API
-       */
-      async function FetchQrData(clientId: string) {
-        if (!clientId) return; // Validación de seguridad
-
+      async function fetchQrData(clientId: string, token: string) {
         try {
           const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/qr/generate`, {
             method: "POST",
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${jwt}`, // Usamos el JWT para autorización
+              'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({
-              client_id: parseInt(clientId, 10),
-            }),
+            body: JSON.stringify({ client_id: parseInt(clientId, 10) }),
           });
           const data = await response.json();
-
           if (response.ok) {
-            console.log("QR Token obtenido con éxito.");
-            // Actualizamos el estado con el string para el QR.
             setQrData(data.qr_token || '');
           } else {
-            console.error("Error en la API de QR:", data.message || response.statusText);
-            setQrData(''); // Limpiamos el QR si hubo un error
+            setHasError(true);
           }
         } catch (error) {
-          console.error('Error al solicitar el QR:', error);
-          setQrData(''); // Limpiamos el QR si hubo un error de red
+          setHasError(true);
         }
       }
 
       loadUserDataAndGenerateQr();
-
-      // Función de limpieza
-      return () => {
-        console.log("Saliendo de la pestaña.");
-      };
+      return () => {};
     }, [])
   );
 
-  // ------------------------------------------------------------------
-  // --- 3. Renderizado Condicional Mejorado para Evitar el Error ---
-  // ------------------------------------------------------------------
-
-  // 1. Mostrar estado de carga (mientras se buscan datos)
-  if (isLoading) {
+  if (!fontsLoaded || isLoading) {
     return (
-      <View style={styles.container}>
-        <View>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text>Cargando datos...</Text>
-        </View>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+        <Text style={styles.loadingText}>Cargando perfil...</Text>
       </View>
     );
   }
 
-  // 2. Mostrar si no hay ID O si hay ID pero no se pudo generar el string del QR (Error)
-  // ¡CLAVE!: Si qrData está vacío, no intentamos renderizar el código QR.
-  if (!userIdState || !qrData) {
+  if (hasError || !qrData) {
     return (
-      <View style={styles.container}>
-        <View>
-            <Text style={styles.nombreCliente}>
-                {userIdState ? 'Error al generar QR' : 'Sesión no encontrada'}
-            </Text>
-            <Text style={{ textAlign: 'center', marginHorizontal: 20 }}>
-                {userIdState
-                    ? 'No se pudo obtener el token QR. Verifica tu conexión e intenta de nuevo.'
-                    : 'No se encontró un ID de usuario. Por favor, vuelve a iniciar sesión.'
-                }
-            </Text>
-        </View>
+      <View style={styles.centerContainer}>
+        <Ionicons name="alert-circle-outline" size={80} color={COLORS.accent} />
+        <Text style={styles.errorTitle}>SESIÓN CADUCADA</Text>
+        <Text style={styles.errorSub}>No pudimos generar tu código. Por favor, intenta iniciar sesión de nuevo.</Text>
       </View>
     );
   }
 
-  // 3. Mostrar el perfil y el QR (Todo está disponible: !isLoading, userIdState y qrData tienen valor)
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigator.openDrawer()}>
-          <Text style={styles.hamburgerIcon}>☰</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Perfil</Text>
-        <View style={{ width: 30 }} />
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
-      <View>
-        <QrCodeSvg
-          style={styles.qrStyle}
-          // El 'value' está garantizado como un string no vacío aquí
-          value={qrData} 
-          frameSize={170}
-          contentCells={5}
-        />
-        <Text style={styles.nombreCliente}>{nombreClienteState || 'Usuario'}</Text>
+      {/* HEADER PROFESIONAL */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
+          <Ionicons name="grid-outline" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>MI PERFIL</Text>
+        <View style={{ width: 40 }} /> 
+      </View>
+
+      <View style={styles.content}>
+        {/* TARJETA DE PERFIL TIPO MEMBRESÍA */}
+        <View style={styles.profileCard}>
+          <View style={styles.cardHeader}>
+             <Text style={styles.brandName}>QRONNOS</Text>
+             
+          </View>
+          
+          <View style={styles.userInfoSection}>
+            <Text style={styles.userName}>{nombreClienteState.toUpperCase() || 'USUARIO'}</Text>
+            <View style={styles.badgeContainer}>
+                <Text style={styles.userLabel}>CLIENTE EXCLUSIVO</Text>
+            </View>
+          </View>
+
+          {/* CONTENEDOR DEL QR REFINADO */}
+          <View style={styles.qrWrapper}>
+            <QrCodeSvg
+              value={qrData} 
+              frameSize={180}
+              contentCells={5}
+              backgroundColor="white"
+              color="#000"
+            />
+          </View>
+          
+          <View style={styles.scanHintContainer}>
+            <Ionicons name="scan-outline" size={18} color={COLORS.accent} />
+            <Text style={styles.footerNoteCard}>Identificación Digital</Text>
+          </View>
+        </View>
+
+        <Text style={styles.footerNote}>Presenta este código en los comercios aliados para recibir tus beneficios.</Text>
       </View>
     </View>
   );
 }
 
-// -----------------------------------------------------------
-// --- ESTILOS (Mantenidos EXACTAMENTE como los proporcionaste)
-// -----------------------------------------------------------
-
-
-// Estilos básicos de ejemplo
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  nombreCliente:{
-    marginHorizontal:'auto',
-    marginVertical:20,
-    fontSize:20,
-    fontWeight: 900
-  },
-  qrStyle:{
-    backgroundColor:'rgba(255, 255, 255, 0)',
-    margin:'auto'
+    backgroundColor: COLORS.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: COLORS.background,
+    padding: 30
   },
-  // Cabecera
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 50, // Ajuste para SafeArea
+    paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 15,
-    
-  },
-  hamburgerIcon: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    top: -30
+    paddingBottom: 20,
+    backgroundColor: COLORS.background,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 160,
-    
-  },
-  // Contenido
-  scrollContent: {
-    padding: 20,
-  },
-  welcomeText: {
-    fontSize: 24,
-    marginBottom: 20,
-    fontWeight: 'bold',
-  },
-  textBase: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subText: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  // Tarjetas (Cards) de lugares
-  card: {
-    backgroundColor: '#1c1c1c', // Un gris muy oscuro para contrastar con el negro
-    borderRadius: 15,
-    marginBottom: 25,
-    overflow: 'hidden',
-    elevation: 5, // Sombra para Android
-    shadowColor: '#fff', // Sombra sutil para iOS
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  cardImage: {
-    width: '100%',
-    height: 180,
-    resizeMode: 'cover',
-  },
-  cardTextContainer: {
-    padding: 15,
-  },
-  cardTitle: {
-    color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontFamily: FONTS.title,
+    color: COLORS.text,
+    letterSpacing: 1
   },
-  cardDesc: {
-    color: '#fff',
+  iconButton: {
+    padding: 8,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 12,
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 20,
+  },
+  // --- CARD DESIGN ---
+  profileCard: {
+    width: width * 0.88,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 30,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  cardHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30
+  },
+  brandName: {
+    fontFamily: FONTS.title,
+    color: COLORS.accent,
     fontSize: 14,
-    lineHeight: 20,
+    letterSpacing: 2
   },
+  chipDesign: {
+    width: 40,
+    height: 30,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  userInfoSection: {
+    alignItems: 'center',
+    marginBottom: 30
+  },
+  userName: {
+    fontSize: 22,
+    fontFamily: FONTS.title,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 8
+  },
+  badgeContainer: {
+    backgroundColor: 'rgba(1, 195, 142, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(1, 195, 142, 0.2)'
+  },
+  userLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.textBold,
+    color: COLORS.accent,
+    letterSpacing: 1,
+  },
+  qrWrapper: {
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+  },
+  scanHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 35,
+  },
+  footerNoteCard: {
+    marginLeft: 8,
+    fontSize: 11,
+    color: COLORS.textSec,
+    fontFamily: FONTS.textMedium,
+    textTransform: 'uppercase',
+    letterSpacing: 1
+  },
+  // --- OTROS ---
+  loadingText: {
+    marginTop: 15,
+    fontSize: 14,
+    fontFamily: FONTS.textMedium,
+    color: COLORS.textSec,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontFamily: FONTS.title,
+    marginTop: 20,
+    color: COLORS.text
+  },
+  errorSub: {
+    fontSize: 14,
+    fontFamily: FONTS.textRegular,
+    textAlign: 'center',
+    color: COLORS.textSec,
+    marginTop: 10,
+    lineHeight: 22,
+    paddingHorizontal: 20
+  },
+  footerNote: {
+    marginTop: 40,
+    fontSize: 13,
+    color: COLORS.textSec,
+    fontFamily: FONTS.textRegular,
+    textAlign: 'center',
+    paddingHorizontal: 50,
+    lineHeight: 20,
+    opacity: 0.6
+  }
 });
