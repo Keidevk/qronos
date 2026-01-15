@@ -34,7 +34,7 @@ const CATEGORIES: Category[] = ['Todos', 'Restaurantes', 'Tiendas', 'Ferreterias
 // Aquí definimos qué ciudades pertenecen a qué país
 const COUNTRIES_CONFIG: { [key: string]: string[] } = {
   'Colombia': ['Todas', 'Cartagena', 'Barranquilla'],
-  'Venezuela': ['Todas', 'Caracas', 'Maracaibo'],
+  'España': ['Todas', 'Madrid'],
 };
 
 const COUNTRIES_LIST = Object.keys(COUNTRIES_CONFIG);
@@ -74,6 +74,29 @@ const dataLugares: Lugar[] = [
     ciudad: 'Cartagena',
     mapLink: "https://maps.app.goo.gl/LGfJ6hrdKQGjKMsH7"
   },
+  {
+    id: 3,
+    titulo: "Burgatory Gourmet",
+    descripcion: "Burgatory Gourmet, Av Miramar #No. 23-15, Manga, Cartagena de Indias, Bolívar, Colombia",
+    imagen: require('../../../assets/images/BurgatoryBistroBar.jpg'),
+    descuentos: "10%",
+    categoria: 'Restaurantes',
+    pais: 'Colombia',
+    ciudad: 'Cartagena',
+    mapLink: "https://maps.app.goo.gl/J8ThHUHg7ofjAxBk7"
+  },
+  {
+    id: 4,
+    titulo: "Quesito",
+    descripcion: "C. de Escosura, 9, Chamberí, 28015 Madrid, España",
+    imagen: require('../../../assets/images/QuesitoLogo.jpg'),
+    descuentos: "10%",
+    categoria: 'Restaurantes',
+    pais: 'España',
+    ciudad: 'Madrid',
+    mapLink: "https://maps.app.goo.gl/1Jz3o6YkYy3K3n4X9"
+  }
+
 
 ];
 
