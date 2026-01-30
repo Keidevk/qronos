@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Asegúrate de importar esto
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Dimensions, Image, Linking, Modal, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, Image, Linking, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -11,15 +12,14 @@ const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 const COLORS = {
   background: '#0f1115',
   cardBg: '#181b21',
-  accent: '#01c38e', // Verde Neón
-  secondaryAccent: '#4a5568', // Gris azulado para elementos secundarios
+  accent: '#01c38e', 
+  secondaryAccent: '#4a5568', 
   text: '#ffffff',
   textSec: '#8b9bb4',
   border: '#232936',
   overlay: 'rgba(0,0,0,0.6)'
 };
 
-// --- DEFINICIÓN DE FUENTES ---
 const FONTS = {
   title: 'Heavitas', 
   textRegular: 'Poppins-Regular',
@@ -27,11 +27,10 @@ const FONTS = {
   textBold: 'Poppins-Bold'
 };
 
-type Category = 'Todos' | 'Restaurantes' | 'Tiendas' | 'Ferreterias' | 'Comida rapida';
-const CATEGORIES: Category[] = ['Todos', 'Restaurantes', 'Tiendas', 'Ferreterias', 'Comida rapida'];
+// Nota: Asegúrate de que las categorías en tu Base de Datos coincidan con estas strings
+type Category = 'Todos' | 'Restaurantes' | 'Tiendas' | 'Bar' | string;
+const CATEGORIES: Category[] = ['Todos', 'Restaurantes', 'Bar',"Tiendas"];
 
-// --- CONFIGURACIÓN DE PAÍSES Y CIUDADES ---
-// Aquí definimos qué ciudades pertenecen a qué país
 const COUNTRIES_CONFIG: { [key: string]: string[] } = {
   'Colombia': ['Todas', 'Cartagena', 'Barranquilla'],
   'España': ['Todas', 'Madrid'],
@@ -39,71 +38,33 @@ const COUNTRIES_CONFIG: { [key: string]: string[] } = {
 
 const COUNTRIES_LIST = Object.keys(COUNTRIES_CONFIG);
 
+// --- INTERFAZ AJUSTADA A TUS DATOS DE PRISMA ---
 interface Lugar {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  imagen: any; 
-  categoria: Category;
-  pais: string; // NUEVO CAMPO
-  ciudad: string;
-  descuentos?: string;
-  mapLink: string;
+  id: number;           // viene de empresa_id
+  titulo: string;       // viene de nombreCompleto
+  descripcion: string;  // viene de descripcion
+  imagen: string | null; // viene de fotoPerfil (Logo)
+  categoria: string;    // viene de categoria
+  pais: string;         // viene de pais
+  ciudad: string;       // viene de ciudad
+  descuentos?: string | null; // viene de descuento
+  mapLink?: string | null;    // viene de ubicacionMaps
+  
+  // Fotos de la galería
+  img1?: string | null; // viene de fotoDescripcion1
+  img2?: string | null; // viene de fotoDescripcion2
+  img3?: string | null; // viene de fotoDescripcion3
 }
-
-const dataLugares: Lugar[] = [
-  {
-    id: 1,
-    titulo: "1533 Restaurante & Bar",
-    descripcion: "Centro, calle la soledad (36) # 5-82, Cartagena de Indias, Bolívar, Colombia",
-    imagen: require('../../../assets/images/1533Restaurante.png'), 
-    descuentos: "10%",
-    categoria: 'Restaurantes',
-    pais: 'Colombia',
-    ciudad: 'Cartagena',
-    mapLink: "https://maps.app.goo.gl/hvQafnq9fFSZujyu5" 
-  },
-  {
-    id: 2,
-    titulo: "AÚMA tierra & mar",
-    descripcion: "Callejon de los estribos #2-56, Cartagena de Indias, Bolívar, Colombia",
-    imagen: require('../../../assets/images/aumalogo.png'),
-    descuentos: "10%",
-    categoria: 'Restaurantes',
-    pais: 'Colombia',
-    ciudad: 'Cartagena',
-    mapLink: "https://maps.app.goo.gl/LGfJ6hrdKQGjKMsH7"
-  },
-  {
-    id: 3,
-    titulo: "Burgatory Gourmet",
-    descripcion: "Burgatory Gourmet, Av Miramar #No. 23-15, Manga, Cartagena de Indias, Bolívar, Colombia",
-    imagen: require('../../../assets/images/BurgatoryBistroBar.jpg'),
-    descuentos: "10%",
-    categoria: 'Restaurantes',
-    pais: 'Colombia',
-    ciudad: 'Cartagena',
-    mapLink: "https://maps.app.goo.gl/J8ThHUHg7ofjAxBk7"
-  },
-  {
-    id: 4,
-    titulo: "Quesito",
-    descripcion: "C. de Escosura, 9, Chamberí, 28015 Madrid, España",
-    imagen: require('../../../assets/images/QuesitoLogo.jpg'),
-    descuentos: "10%",
-    categoria: 'Restaurantes',
-    pais: 'España',
-    ciudad: 'Madrid',
-    mapLink: "https://maps.app.goo.gl/1Jz3o6YkYy3K3n4X9"
-  }
-
-
-];
 
 export default function HomeScreen() {
   const navigator: any = useNavigation();
   const safeAreaInsets = useSafeAreaInsets();
   
+  // --- ESTADOS DE DATOS API ---
+  const [lugares, setLugares] = useState<Lugar[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [fontsLoaded] = useFonts({
     'Heavitas': require('../../../assets/fonts/Heavitas.ttf'), 
     'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
@@ -114,50 +75,118 @@ export default function HomeScreen() {
   const [selectedLugar, setSelectedLugar] = useState<Lugar | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category>('Todos');
-  
-  // --- NUEVOS ESTADOS PARA PAÍS ---
   const [selectedCountry, setSelectedCountry] = useState<string>('Colombia');
   const [isCountryMenuOpen, setIsCountryMenuOpen] = useState(false);
-  
   const [selectedCity, setSelectedCity] = useState<string>('Todas');
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
-  // Calcular las ciudades disponibles según el país seleccionado
+  // DENTRO DE TU COMPONENTE:
+const fetchLugares = async () => {
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_API_URL;
+      
+      // 2. Recuperamos el token guardado (asumiendo que lo guardaste al hacer Login)
+      const token = await AsyncStorage.getItem('userToken'); // O el nombre que le hayas puesto a tu token
+      console.log("Token recuperado:", token ? "Token existe" : "TOKEN ES NULL");
+
+      // 3. Enviamos el token en los headers
+      const response = await fetch(`${baseUrl}/api/empresa`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // <--- AQUÍ ESTÁ LA CLAVE
+        }
+      });
+      
+      const data = await response.json();
+      console.log("Datos crudos del server:", data); // Verifica que sea un Array de objeto
+
+      // 4. VALIDACIÓN DE SEGURIDAD (Para evitar el error "map is not a function")
+      if (!Array.isArray(data)) {
+        console.error("Error: La API no devolvió un array. Devolvió:", data);
+        // Si el token venció o es inválido, podrías redirigir al login aquí
+        if (response.status === 401) {
+            Alert.alert("Sesión expirada", "Por favor inicia sesión nuevamente.");
+            // navigator.navigate('Login'); 
+        }
+        return; 
+      }
+      
+      const formattedData = data.map((item: any) => ({
+        id: item.empresa_id, // Asegúrate que tu DB usa empresa_id o id
+        titulo: item.nombreCompleto,
+        descripcion: item.descripcion || "Sin descripción",
+        imagen: item.fotoPerfil,
+        categoria: item.categoria || 'Varios',
+        pais: item.pais,
+        ciudad: item.ciudad,
+        descuentos: item.descuento,
+        mapLink: item.ubicacionMaps,
+        img1: item.fotoDescripcion1,
+        img2: item.fotoDescripcion2,
+        img3: item.fotoDescripcion3,
+      }));
+      
+      console.log("Datos formateados listos:", formattedData.length);
+      setLugares(formattedData);
+
+    } catch (error) {
+      console.error("Error en fetchLugares:", error);
+      if(!refreshing) Alert.alert("Error", "No se pudieron cargar los aliados.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLugares();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchLugares();
+  };
+
   const availableCities = useMemo(() => {
     return COUNTRIES_CONFIG[selectedCountry] || ['Todas'];
   }, [selectedCountry]);
 
   const filteredLugares = useMemo(() => {
-    return dataLugares.filter(lugar => {
-      // 1. Filtro por País (Estricto)
-      const matchCountry = lugar.pais === selectedCountry;
-      // 2. Filtro por Ciudad
-      const matchCity = selectedCity === 'Todas' || lugar.ciudad === selectedCity;
-      // 3. Filtro por Categoría
-      const matchCategory = selectedCategory === 'Todos' || lugar.categoria === selectedCategory;
+    return lugares.filter(lugar => {
+      // Nota: Comparamos ignorando mayúsculas/minúsculas para evitar errores
+      const matchCountry = lugar.pais?.toLowerCase() === selectedCountry.toLowerCase();
+      const matchCity = selectedCity === 'Todas' || lugar.ciudad?.toLowerCase() === selectedCity.toLowerCase();
+      const matchCategory = selectedCategory === 'Todos' || lugar.categoria?.toLowerCase() === selectedCategory.toLowerCase();
       
+      // Si quieres ser estricto con los filtros, usa return matchCountry && matchCity && matchCategory;
+      // Por ahora, retornaremos true para que VEAS los datos si los filtros no coinciden exactamente
       return matchCountry && matchCity && matchCategory;
     });
-  }, [selectedCategory, selectedCity, selectedCountry]);
+  }, [selectedCategory, selectedCity, selectedCountry, lugares]);
 
-  // Manejador para cambio de país
   const handleCountryChange = (country: string) => {
     setSelectedCountry(country);
-    setSelectedCity('Todas'); // Resetear ciudad al cambiar país
+    setSelectedCity('Todas');
     setIsCountryMenuOpen(false);
   };
 
-  const handleOpenMaps = async (mapLink: string) => {
+  const handleOpenMaps = async (mapLink?: string | null) => {
+    if (!mapLink) {
+        Alert.alert("Aviso", "Esta empresa no ha registrado su ubicación.");
+        return;
+    }
     const supported = await Linking.canOpenURL(mapLink);
     if (supported) await Linking.openURL(mapLink);
-    else Alert.alert("Error", "No se pudo abrir el mapa.");
+    else await Linking.openURL(mapLink); // Intentar abrir de todas formas
   };
 
-  const getImageSource = (img: any) => {
-    return typeof img === 'string' ? { uri: img } : img;
+  const getImageSource = (img: string | null | undefined) => {
+    if (!img) return { uri: 'https://via.placeholder.com/400x300.png?text=Sin+Imagen' };
+    return { uri: img };
   };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || loading) {
     return (
       <View style={[styles.container, {justifyContent: 'center', alignItems: 'center'}]}>
         <ActivityIndicator size="large" color={COLORS.accent} />
@@ -186,16 +215,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
         </View>
 
-        {/* --- FILTROS DE UBICACIÓN (PAÍS Y CIUDAD) --- */}
         <View style={styles.locationFiltersContainer}>
-            
-            {/* 1. SELECTOR DE PAÍS (Pequeño, arriba) */}
             <View style={{alignItems: 'flex-start', marginBottom: 8}}>
                 <TouchableOpacity 
                     style={styles.countrySelectorBtn}
                     onPress={() => {
                         setIsCountryMenuOpen(!isCountryMenuOpen);
-                        setIsCityMenuOpen(false); // Cerrar menú de ciudad si se abre país
+                        setIsCityMenuOpen(false);
                     }}
                 >
                     <Ionicons name="globe-outline" size={14} color={COLORS.textSec} />
@@ -204,12 +230,11 @@ export default function HomeScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* 2. SELECTOR DE CIUDAD (Grande, principal) */}
             <TouchableOpacity 
                 style={styles.citySelectorBtn} 
                 onPress={() => {
                     setIsCityMenuOpen(!isCityMenuOpen);
-                    setIsCountryMenuOpen(false); // Cerrar menú de país si se abre ciudad
+                    setIsCountryMenuOpen(false);
                 }}
             >
                 <Ionicons name="location-sharp" size={18} color={COLORS.accent} />
@@ -221,7 +246,7 @@ export default function HomeScreen() {
         </View>
       </View>
       
-      {/* MENÚ FLOTANTE: PAÍS */}
+      {/* DROPDOWNS */}
       {isCountryMenuOpen && (
         <View style={[styles.floatingDropdown, { top: safeAreaInsets.top + 110 }]}>
             <Text style={styles.dropdownHeaderLabel}>Selecciona tu país</Text>
@@ -243,7 +268,6 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* MENÚ FLOTANTE: CIUDAD */}
       {isCityMenuOpen && (
         <View style={[styles.floatingDropdown, { top: safeAreaInsets.top + 155 }]}>
             <Text style={styles.dropdownHeaderLabel}>Ciudades en {selectedCountry}</Text>
@@ -265,9 +289,14 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        
-        {/* TABS CATEGORÍAS */}
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />
+        }
+      >
+        {/* CATEGORIAS */}
         <View style={styles.categoriesContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
             {CATEGORIES.map((cat) => (
@@ -285,7 +314,7 @@ export default function HomeScreen() {
             </ScrollView>
         </View>
 
-        {/* LISTADO */}
+        {/* LISTA DE CARDS */}
         <View style={styles.listContainer}>
           <Text style={styles.resultsText}>
             Mostrando resultados en <Text style={{color: COLORS.accent, fontFamily: FONTS.textBold}}>{selectedCountry}</Text>
@@ -303,16 +332,16 @@ export default function HomeScreen() {
               style={styles.proCard}
             >
               <View style={styles.imageContainer}>
-                  <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="contain" />
+                  {/* AQUÍ VA EL LOGO (fotoPerfil) */}
+                  <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="cover" />
                   
                   {lugar.descuentos && (
                     <View style={styles.discountBadge}>
                         <Text style={styles.discountText}>{lugar.descuentos}</Text>
                     </View>
                   )}
-                  {/* Etiqueta de País pequeña en la imagen */}
                   <View style={styles.countryBadge}>
-                       <Text style={styles.countryBadgeText}>{lugar.pais}</Text>
+                        <Text style={styles.countryBadgeText}>{lugar.pais}</Text>
                   </View>
               </View>
               
@@ -347,20 +376,21 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* MODAL */}
+      {/* MODAL DETALLE */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalContainer}>
             <TouchableOpacity style={styles.modalBackdrop} onPress={() => setModalVisible(false)} />
             
             <View style={styles.modalCard}>
                 <View style={styles.modalImageWrapper}>
-                    <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} resizeMode="contain" />
+                    {/* EN EL MODAL MOSTRAMOS TAMBIÉN EL LOGO EN GRANDE */}
+                    <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} resizeMode="cover" />
                     <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                         <Ionicons name="close" size={24} color="#FFF" />
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.modalContent}>
+                <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.modalHeader}>
                         <View style={styles.tagPill}>
                             <Text style={styles.tagText}>{selectedLugar?.categoria}</Text>
@@ -378,6 +408,18 @@ export default function HomeScreen() {
                     <Text style={styles.sectionLabel}>ACERCA DEL LUGAR</Text>
                     <Text style={styles.modalDescription}>{selectedLugar?.descripcion}</Text>
 
+                    {/* GALERÍA DE IMÁGENES (fotoDescripcion 1, 2, 3) */}
+                    {(selectedLugar?.img1 || selectedLugar?.img2 || selectedLugar?.img3) && (
+                      <View style={{marginBottom: 20}}>
+                        <Text style={styles.sectionLabel}>GALERÍA</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {[selectedLugar.img1, selectedLugar.img2, selectedLugar.img3].map((img, index) => (
+                            img ? <Image key={index} source={{uri: img}} style={{width: 120, height: 120, borderRadius: 12, marginRight: 10}} /> : null
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+
                     {selectedLugar?.descuentos ? (
                         <View style={styles.couponContainer}>
                             <View style={styles.couponLeft}>
@@ -390,14 +432,15 @@ export default function HomeScreen() {
                         </View>
                     ) : null}
 
+                    {/* BOTÓN DE GOOGLE MAPS */}
                     <TouchableOpacity 
-                        onPress={() => handleOpenMaps(selectedLugar?.mapLink || '')} 
-                        style={styles.actionButton}
+                        onPress={() => handleOpenMaps(selectedLugar?.mapLink)} 
+                        style={[styles.actionButton, {marginBottom: 40}]}
                     >
                         <Text style={styles.actionButtonText}>IR AHORA</Text>
                         <Ionicons name="navigate" size={20} color="#000" style={{marginLeft: 8}}/>
                     </TouchableOpacity>
-                </View>
+                </ScrollView>
             </View>
         </View>
       </Modal>
@@ -407,8 +450,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  
-  // --- HEADER ---
   header: {
     backgroundColor: COLORS.background,
     paddingHorizontal: 20,
@@ -435,11 +476,7 @@ const styles = StyleSheet.create({
     textAlign: 'center' 
   },
   iconButton: { padding: 8, backgroundColor: COLORS.cardBg, borderRadius: 12 },
-  
-  // --- LOCATION FILTERS ---
   locationFiltersContainer: { marginBottom: 5 },
-
-  // Selector de País (Estilo botón pequeño)
   countrySelectorBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -457,8 +494,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textMedium,
     marginHorizontal: 6
   },
-
-  // Selector de Ciudad (Estilo principal)
   citySelectorBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -476,8 +511,6 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     fontFamily: FONTS.textMedium 
   },
-  
-  // --- DROPDOWNS UNIFICADOS ---
   floatingDropdown: {
     position: 'absolute',
     left: 20, right: 20,
@@ -514,8 +547,6 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     fontFamily: FONTS.textRegular 
   },
-
-  // --- CATEGORIES (Tabs) ---
   categoriesContainer: { marginTop: 15, marginBottom: 10 },
   tabItem: { marginRight: 25, alignItems: 'center', paddingVertical: 5 },
   tabText: { 
@@ -528,8 +559,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textBold 
   },
   activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accent, marginTop: 4 },
-
-  // --- LIST ---
   listContainer: { paddingHorizontal: 20, paddingTop: 10 },
   resultsText: { 
     color: COLORS.textSec, 
@@ -538,8 +567,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textMedium,
     letterSpacing: 0.5
   },
-  
-  // --- PRO CARD ---
   proCard: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 20,
@@ -574,7 +601,6 @@ const styles = StyleSheet.create({
   countryBadgeText: {
       color: '#fff', fontSize: 10, fontFamily: FONTS.textMedium
   },
-  
   cardContent: { padding: 16 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   cardCategory: { 
@@ -590,7 +616,6 @@ const styles = StyleSheet.create({
     marginLeft: 4, 
     fontFamily: FONTS.textMedium 
   },
-  
   cardTitle: { 
     fontSize: 18, 
     color: COLORS.text, 
@@ -610,8 +635,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textBold, 
     marginRight: 5 
   },
-
-  // --- MODAL ---
   modalContainer: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)' },
   modalCard: {
@@ -634,7 +657,6 @@ const styles = StyleSheet.create({
   tagText: { color: COLORS.text, fontSize: 11, fontFamily: FONTS.textBold },
   cityPill: { flexDirection: 'row', alignItems: 'center' },
   cityText: { color: COLORS.textSec, fontSize: 13, marginLeft: 5, fontFamily: FONTS.textMedium },
-  
   modalTitle: { 
     fontSize: 24, 
     color: COLORS.text, 
@@ -656,7 +678,6 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     fontFamily: FONTS.textRegular 
   },
-  
   couponContainer: {
     flexDirection: 'row',
     backgroundColor: '#131f1c',
@@ -682,7 +703,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.textBold,
     marginTop: 2
   },
-
   actionButton: {
     backgroundColor: COLORS.accent,
     flexDirection: 'row',
