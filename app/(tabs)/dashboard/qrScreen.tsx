@@ -51,7 +51,8 @@ export default function QRScreen() {
     }
     const handleBarCodeScanned = ({ type, data }:{type:any,data:any}) => {
     setScanned(true);
-    CreateMetricasQr(data,5)
+    //Aca van los puntos que da el qr
+    CreateMetricasQr(data,10)
     // alert(`Código QR escaneado:\nTipo: ${type}\nDatos: ${data}`);
   };
 
