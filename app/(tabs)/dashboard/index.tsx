@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // 1. Asegúrate de importar esto
 import { useNavigation } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Linking, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -80,21 +81,21 @@ export default function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState<string>('Todas');
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
-  // DENTRO DE TU COMPONENTE:
+  
 const fetchLugares = async () => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_API_URL;
       
-      // 2. Recuperamos el token guardado (asumiendo que lo guardaste al hacer Login)
-      const token = await AsyncStorage.getItem('userToken'); // O el nombre que le hayas puesto a tu token
+      // 2. Recuracion del token guardado
+      const token = await SecureStore.getItemAsync('jwt'); 
       console.log("Token recuperado:", token ? "Token existe" : "TOKEN ES NULL");
 
-      // 3. Enviamos el token en los headers
+      // 3. Envio el token en los headers
       const response = await fetch(`${baseUrl}/api/empresa`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // <--- AQUÍ ESTÁ LA CLAVE
+          'Authorization': `Bearer ${token}` 
         }
       });
       

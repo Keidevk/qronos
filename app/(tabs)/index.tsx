@@ -176,6 +176,7 @@ export default function HomeScreen() {
                 const { token, token_empresa, jwt, rol, cliente, empresa } = data;
 
                 if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
+                console.log("JWT guardado con exito");
                 if (rol) await SecureStore.setItemAsync('rol', String(rol));
 
                 if (token) {
