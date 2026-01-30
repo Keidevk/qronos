@@ -2,7 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    Linking,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Importaciones de Firebase Auth
@@ -40,9 +50,10 @@ export default function Register() {
     const [nombreCompleto, setNombreCompleto] = useState("");
     const [correo, setCorreo] = useState("");
     const [contrasena, setContrasena] = useState(""); 
+    const [aceptoTerminos, setAceptoTerminos] = useState(false); // Estado para el checkbox
     const [isRegistering, setIsRegistering] = useState(false);
 
-    // CARGA DE FUENTES (Rutas corregidas para la profundidad de carpeta actual)
+    // Carga de fuentes
     const [fontsLoaded] = useFonts({
         'Heavitas': require('../../../assets/fonts/Heavitas.ttf'),
         'Poppins-Regular': require('../../../assets/fonts/Poppins-Regular.ttf'),
@@ -50,7 +61,21 @@ export default function Register() {
         'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
     });
 
+    // Función para abrir la URL externa
+    const handleOpenTerms = () => {
+        const url = 'https://qronnos.co/terminos';
+        Linking.openURL(url).catch((err) => 
+            Alert.alert("Error", "No se pudo abrir la página web.")
+        );
+    };
+
     async function handleRegister() {
+        // Bloqueo de seguridad si no ha marcado la casilla
+        if (!aceptoTerminos) {
+            Alert.alert("Atención", "Debes aceptar los términos y condiciones para continuar.");
+            return;
+        }
+
         if (!nombreCompleto || !correo || !contrasena) {
             Alert.alert("Campos incompletos", "Por favor llena todos los datos.");
             return;
@@ -103,7 +128,6 @@ export default function Register() {
         <View style={styles.fullScreenContainer}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
             
-            {/* Cabecera con Botón Regresar */}
             <View style={{ paddingTop: safeareaInsets.top + 20, paddingHorizontal: 25 }}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.accent} />
@@ -159,11 +183,33 @@ export default function Register() {
                         />
                     </View>
                 </View>
-                
+
+                {/* BOTÓN TÉRMINOS Y CONDICIONES */}
+                <View style={styles.termsContainer}>
+                    <TouchableOpacity 
+                        style={[styles.checkbox, aceptoTerminos && styles.checkboxChecked]} 
+                        onPress={() => setAceptoTerminos(!aceptoTerminos)}
+                        activeOpacity={0.8}
+                    >
+                        {aceptoTerminos && <Ionicons name="checkmark" size={16} color="#000" />}
+                    </TouchableOpacity>
+                    
+                    <Text style={styles.termsText}>
+                        Acepto los{' '}
+                        <Text style={styles.linkText} onPress={handleOpenTerms}>
+                            Términos y Condiciones
+                        </Text>
+                    </Text>
+                </View>
+
+                {/* BOTÓN REGISTRARSE (Se deshabilita visual y lógicamente) */}
                 <TouchableOpacity 
                     onPress={handleRegister} 
-                    style={[styles.button, isRegistering && { opacity: 0.7 }]}
-                    disabled={isRegistering}
+                    style={[
+                        styles.button, 
+                        (isRegistering || !aceptoTerminos) && { opacity: 0.5, elevation: 0, shadowOpacity: 0 }
+                    ]}
+                    disabled={isRegistering || !aceptoTerminos}
                 >
                     {isRegistering ? (
                         <ActivityIndicator color="#000" />
@@ -247,11 +293,45 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.textMedium,
         color: COLORS.text,
     },
+    // NUEVOS ESTILOS PARA EL CHECKBOX Y EL LINK
+    termsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 5,
+        marginBottom: 10,
+        paddingHorizontal: 5
+    },
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.cardBg,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    checkboxChecked: {
+        backgroundColor: COLORS.accent,
+        borderColor: COLORS.accent,
+    },
+    termsText: {
+        color: COLORS.textSec,
+        fontSize: 12,
+        fontFamily: FONTS.textRegular,
+        flex: 1
+    },
+    linkText: {
+        color: COLORS.accent,
+        fontFamily: FONTS.textBold,
+        textDecorationLine: 'underline'
+    },
     button: {
         backgroundColor: COLORS.accent,
         width: "100%",
         height: 60,
-        marginTop: 30,
+        marginTop: 20,
         borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
