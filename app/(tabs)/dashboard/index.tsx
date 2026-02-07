@@ -184,6 +184,9 @@ export default function HomeScreen() {
       {/* HEADER PRINCIPAL */}
       <View style={[styles.header, { paddingTop: safeAreaInsets.top + 10 }]}>
         <View style={styles.headerTopRow}>
+          <View style={{ width: 24 }}>
+            {/* Elemento de relleno */}
+          </View>
             <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
                 <Ionicons name="grid-outline" size={20} color={COLORS.text} />
             </TouchableOpacity>

@@ -14,6 +14,14 @@ export default function TabLayout() {
           tabBarStyle: { display: 'none' },
         }}
       ></Tabs.Screen>
+      <Tabs.Screen
+        name="forgotpassword"
+        options={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarStyle: { display: 'none' },
+        }}
+      ></Tabs.Screen>
     </Tabs>
   );
 }

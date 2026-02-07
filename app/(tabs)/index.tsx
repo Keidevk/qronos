@@ -41,11 +41,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const LOGIN_CLIENTE_URL = `${API_URL}/api/cliente/login`;
 const { width, height } = Dimensions.get('window');
 
-const QronnosFooter = () => (
-    <View style={styles.footerContainer}>
-        <Text style={styles.footerText}>QRONNOS</Text>
-    </View>
-);
+
 
 export default function HomeScreen() {
     const safeareaInsets = useSafeAreaInsets();
@@ -256,6 +252,11 @@ export default function HomeScreen() {
                             ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate aquí</Text>
                         </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push('/(tabs)/account/forgotpassword')} style={styles.registerLink}>
+                        <Text style={styles.textRegister}>
+                            <Text style={styles.linkAccent}>¿Olvidaste tu contraseña?</Text>
+                        </Text>
+                    </TouchableOpacity>
                     
                     <TouchableOpacity 
                         onPress={handleLogin} 
@@ -271,7 +272,6 @@ export default function HomeScreen() {
 
                 </View>
                 
-                <QronnosFooter />
             </Animated.View>
 
             {/* --- CAPA DE ANIMACIÓN SPLASH (Se superpone) --- */}
