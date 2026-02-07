@@ -37,12 +37,6 @@ const FONTS = {
     textBold: 'Poppins-Bold'
 };
 
-const QronnosFooter = () => (
-    <View style={styles.footerContainer}>
-        <Text style={styles.footerText}>QRONNOS</Text>
-    </View>
-);
-
 export default function Register() {
     const safeareaInsets = useSafeAreaInsets();
     const router = useRouter();
@@ -50,8 +44,9 @@ export default function Register() {
     const [nombreCompleto, setNombreCompleto] = useState("");
     const [correo, setCorreo] = useState("");
     const [contrasena, setContrasena] = useState(""); 
-    const [aceptoTerminos, setAceptoTerminos] = useState(false); // Estado para el checkbox
+    const [aceptoTerminos, setAceptoTerminos] = useState(false);
     const [isRegistering, setIsRegistering] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     // Carga de fuentes
     const [fontsLoaded] = useFonts({
@@ -61,7 +56,6 @@ export default function Register() {
         'Poppins-Bold': require('../../../assets/fonts/Poppins-Bold.ttf'),
     });
 
-    // Función para abrir la URL externa
     const handleOpenTerms = () => {
         const url = 'https://qronnos.co/terminos';
         Linking.openURL(url).catch((err) => 
@@ -70,7 +64,6 @@ export default function Register() {
     };
 
     async function handleRegister() {
-        // Bloqueo de seguridad si no ha marcado la casilla
         if (!aceptoTerminos) {
             Alert.alert("Atención", "Debes aceptar los términos y condiciones para continuar.");
             return;
@@ -169,18 +162,25 @@ export default function Register() {
                     </View>
                 </View>
                 
-                {/* Contraseña */}
+                {/* Contraseña con botón de visualización */}
                 <View style={styles.inputWrapper}>
                     <Text style={styles.label}>CONTRASEÑA</Text>
-                    <View style={styles.inputShadowContainer}>
+                    <View style={[styles.inputShadowContainer, { flexDirection: 'row', alignItems: 'center', paddingRight: 15 }]}>
                         <TextInput
                             placeholder="********"
                             placeholderTextColor="rgba(255,255,255,0.2)"
-                            secureTextEntry={true}
+                            secureTextEntry={!showPassword}
                             style={styles.TextInput}
                             value={contrasena}
                             onChangeText={setContrasena}
                         />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <Ionicons 
+                                name={showPassword ? "eye-off" : "eye"} 
+                                size={22} 
+                                color={COLORS.textSec} 
+                            />
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -202,7 +202,6 @@ export default function Register() {
                     </Text>
                 </View>
 
-                {/* BOTÓN REGISTRARSE (Se deshabilita visual y lógicamente) */}
                 <TouchableOpacity 
                     onPress={handleRegister} 
                     style={[
@@ -218,8 +217,6 @@ export default function Register() {
                     )}
                 </TouchableOpacity>
             </View>
-            
-            <QronnosFooter />
         </View>
     );
 }
@@ -293,7 +290,6 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.textMedium,
         color: COLORS.text,
     },
-    // NUEVOS ESTILOS PARA EL CHECKBOX Y EL LINK
     termsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -345,24 +341,5 @@ const styles = StyleSheet.create({
         color: "#000",
         fontSize: 15,
         fontFamily: FONTS.title,
-    },
-    footerContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 100,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    footerText: {
-        fontSize: 34,
-        fontFamily: FONTS.title,
-        color: COLORS.accent,
-        letterSpacing: 15,
-        textShadowColor: COLORS.accent,
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 15,
-        elevation: 10,
     }
 });

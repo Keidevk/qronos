@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
-// --- PALETA DE COLORES ---
+// --- PALETA DE COLORES (PREMIUM) ---
 const COLORS = {
   background: '#090a0c',
   cardBg: '#13151a',
@@ -56,7 +56,7 @@ interface Lugar {
 export default function HomeScreen() {
   const navigator: any = useNavigation();
   const safeAreaInsets = useSafeAreaInsets();
-  
+   
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -181,24 +181,14 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
-      {/* HEADER PRINCIPAL */}
+      {/* HEADER PRINCIPAL (LIMPIO) */}
       <View style={[styles.header, { paddingTop: safeAreaInsets.top + 10 }]}>
         <View style={styles.headerTopRow}>
-          <View style={{ width: 24 }}>
-            {/* Elemento de relleno */}
-          </View>
-            <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
-                <Ionicons name="grid-outline" size={20} color={COLORS.text} />
-            </TouchableOpacity>
-            
-            <View style={{ alignItems: 'center' }}>
+            {/* Solo Texto Centrado */}
+            <View style={{ alignItems: 'center', flex: 1 }}>
                 <Text style={styles.headerSubtitle}>ECOSISTEMA</Text>
                 <Text style={styles.headerTitle}>QRONNOS</Text>
             </View>
-
-            <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="search-outline" size={20} color={COLORS.text} />
-            </TouchableOpacity>
         </View>
 
         <View style={styles.locationFiltersContainer}>
@@ -324,14 +314,14 @@ export default function HomeScreen() {
                   <View style={styles.cardOverlay} />
 
                   <View style={styles.cardTopBadges}>
-                     {lugar.descuentos && (
+                      {lugar.descuentos && (
                         <View style={styles.promoBadge}>
                             <Text style={styles.promoText}>{lugar.descuentos}</Text>
                         </View>
-                     )}
-                     <View style={styles.categoryBadge}>
+                      )}
+                      <View style={styles.categoryBadge}>
                         <Text style={styles.categoryBadgeText}>{lugar.categoria}</Text>
-                     </View>
+                      </View>
                   </View>
               </View>
               
@@ -346,21 +336,21 @@ export default function HomeScreen() {
                   </View>
 
                   <View style={styles.cardInfo}>
-                     <Text style={styles.cardTitle}>{lugar.titulo}</Text>
-                     
-                     <View style={styles.locationRow}>
+                      <Text style={styles.cardTitle}>{lugar.titulo}</Text>
+                      
+                      <View style={styles.locationRow}>
                         <Ionicons name="location-sharp" size={12} color={COLORS.accent} />
                         <Text style={styles.cardLocation}>{lugar.ciudad} • {lugar.pais}</Text>
-                     </View>
+                      </View>
 
-                     <Text style={styles.cardDesc} numberOfLines={2}>
+                      <Text style={styles.cardDesc} numberOfLines={2}>
                         {lugar.descripcion}
-                     </Text>
+                      </Text>
 
-                     <View style={styles.cardFooterBtn}>
+                      <View style={styles.cardFooterBtn}>
                         <Text style={styles.btnText}>Explorar</Text>
                         <Ionicons name="arrow-forward" size={14} color={COLORS.textSec} />
-                     </View>
+                      </View>
                   </View>
               </View>
             </TouchableOpacity>
@@ -451,13 +441,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   
-  // HEADER
+  // HEADER (AJUSTADO: Solo Texto)
   header: { backgroundColor: COLORS.background, paddingHorizontal: 24, paddingBottom: 15, zIndex: 10 },
-  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  headerSubtitle: { fontFamily: FONTS.textBold, fontSize: 9, color: COLORS.accent, letterSpacing: 4, marginBottom: 2 },
-  headerTitle: { fontFamily: FONTS.title, fontSize: 24, color: COLORS.text, letterSpacing: 1 },
-  iconButton: { width: 40, height: 40, backgroundColor: COLORS.cardBg, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  
+  headerTopRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  headerSubtitle: { fontFamily: FONTS.textBold, fontSize: 9, color: COLORS.accent, letterSpacing: 4, marginBottom: 2, textAlign: 'center' },
+  headerTitle: { fontFamily: FONTS.title, fontSize: 24, color: COLORS.text, letterSpacing: 1, textAlign: 'center' },
+  // iconButton eliminado ya que no se usa en el header limpio
+
   // FILTERS
   locationFiltersContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
   countrySelectorBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#1a1d24' },
@@ -502,12 +492,10 @@ const styles = StyleSheet.create({
   cardAtmosphereImage: {
     width: '100%',
     height: '100%',
-    // AJUSTE DE BRILLO: Aumentado de 0.6 a 0.85 para más viveza
     opacity: 0.85 
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    // AJUSTE DE BRILLO: Reducido de 0.3 a 0.2 para dejar pasar más luz
     backgroundColor: 'rgba(0,0,0,0.2)' 
   },
   cardTopBadges: {
@@ -576,7 +564,6 @@ const styles = StyleSheet.create({
   modalHeroImage: { width: '100%', height: '100%' },
   modalGradient: { 
     ...StyleSheet.absoluteFillObject, 
-    // AJUSTE DE BRILLO MODAL: Reducido de 0.4 a 0.25 para más claridad
     backgroundColor: 'rgba(0,0,0,0.25)' 
   },
   closeBtn: { position: 'absolute', top: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 },
