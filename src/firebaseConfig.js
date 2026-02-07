@@ -1,20 +1,20 @@
-// 🚨 Importación agregada: initializeApp desde 'firebase/app'
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import { getReactNativePersistence, initializeAuth } from 'firebase/auth';
 
-
 const firebaseConfig = {
-  // 🛑 TODOS LOS VALORES DEBEN ESTAR AQUÍ Y ENTRE COMILLAS
-  apiKey: "AIzaSyCs2VRuwhNYJPG2T0M5eH0KrrK-5aorn4U", 
-  authDomain: "qronnos-a87f9.firebaseapp.com",
-  projectId: "qronnos-a87f9",
-  storageBucket: "qronnos-a87f9.firebasestorage.app", 
-  messagingSenderId: "674321043468",
-  appId: "1:674321043468:web:7536b6251207e093685e29",
+  apiKey: "AIzaSyCfnKQBm_7K9Fgg_BVOTJ6o6z0CbBKTD30",
+  authDomain: "qronnosapp.firebaseapp.com",
+  projectId: "qronnosapp",
+  storageBucket: "qronnosapp.firebasestorage.app",
+  messagingSenderId: "539046395068",
+  appId: "1:539046395068:web:af6c832e23bf4ee16164b9",
+  measurementId: "G-2QRVZM7KBX"
 };
 
-const app = initializeApp(firebaseConfig); 
+const app = initializeApp(firebaseConfig);
+
+// Mantén esto para que el login no se cierre al salir de la app okok
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage)
 });
