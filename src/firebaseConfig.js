@@ -14,7 +14,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Mantén esto para que el login no se cierre al salir de la app
+// Mantén esto para que el login no se cierre al salir de la app okok
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage)
 });
