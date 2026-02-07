@@ -202,10 +202,9 @@ const fetchLugares = async () => {
       {/* HEADER */}
       <View style={[styles.header, { paddingTop: safeAreaInsets.top + 10 }]}>
         <View style={styles.headerTopRow}>
-            <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
-                <Ionicons name="grid-outline" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-            
+          <View style={{ width: 24 }}>
+            {/* Elemento de relleno */}
+          </View>
             <View style={{ alignItems: 'center' }}>
                 <Text style={styles.headerSubtitle}>ECOSISTEMA</Text>
                 <Text style={styles.headerTitle}>QRONNOS</Text>
@@ -461,7 +460,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20
+    marginBottom: 20,
   },
   headerSubtitle: { 
     fontFamily: FONTS.textBold, 
