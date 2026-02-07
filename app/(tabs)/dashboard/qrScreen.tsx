@@ -1,14 +1,13 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function QRScreen() {
     const Insents = useSafeAreaInsets()
     const [permission, requestPermission] = useCameraPermissions();
     const [scanned, setScanned] = useState(false); // Para evitar escanear múltiples veces el mismo código
-    const [puntos,setPuntos] = useState('')
     const [messageState,setMessageState] = useState('')
     async function CreateMetricasQr(qr_token:string,puntos:number){
       const empresa_id = await SecureStore.getItemAsync('empresa_id')
@@ -52,7 +51,8 @@ export default function QRScreen() {
     }
     const handleBarCodeScanned = ({ type, data }:{type:any,data:any}) => {
     setScanned(true);
-    CreateMetricasQr(data,parseInt(puntos))
+    //Aca van los puntos que da el qr
+    CreateMetricasQr(data,10)
     // alert(`Código QR escaneado:\nTipo: ${type}\nDatos: ${data}`);
   };
 
@@ -69,7 +69,6 @@ export default function QRScreen() {
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         />
         <Text style={{ textAlign: 'center', marginTop: 20,fontWeight:600 }}>Apunta la cámara hacia un código QR</Text>
-        <TextInput  onChangeText={setPuntos} value={puntos} style={{minWidth:'80%',marginHorizontal:'auto',borderColor:'#000b76',borderWidth:1,marginVertical:20,borderRadius:10,padding:10}} placeholder='Coloque la cantidad de puntos a dar'></TextInput>
         </>
       )}
     
