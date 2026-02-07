@@ -6,19 +6,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, Linking, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
 // --- PALETA DE COLORES ---
 const COLORS = {
-  background: '#0f1115',
-  cardBg: '#181b21',
+  background: '#090a0c',
+  cardBg: '#13151a',
   accent: '#01c38e', 
   secondaryAccent: '#4a5568', 
   text: '#ffffff',
-  textSec: '#8b9bb4',
-  border: '#232936',
-  overlay: 'rgba(0,0,0,0.6)'
+  textSec: '#9ca3af',
+  border: '#1f2229',
+  overlay: 'rgba(0,0,0,0.6)',
+  gold: '#D4AF37',
 };
 
 const FONTS = {
@@ -28,7 +28,6 @@ const FONTS = {
   textBold: 'Poppins-Bold'
 };
 
-// Nota: Asegúrate de que las categorías en tu Base de Datos coincidan con estas strings
 type Category = 'Todos' | 'Restaurantes' | 'Tiendas' | 'Bar' | string;
 const CATEGORIES: Category[] = ['Todos', 'Restaurantes', 'Bar',"Tiendas"];
 
@@ -39,29 +38,25 @@ const COUNTRIES_CONFIG: { [key: string]: string[] } = {
 
 const COUNTRIES_LIST = Object.keys(COUNTRIES_CONFIG);
 
-// --- INTERFAZ AJUSTADA A TUS DATOS DE PRISMA ---
 interface Lugar {
-  id: number;           // viene de empresa_id
-  titulo: string;       // viene de nombreCompleto
-  descripcion: string;  // viene de descripcion
-  imagen: string | null; // viene de fotoPerfil (Logo)
-  categoria: string;    // viene de categoria
-  pais: string;         // viene de pais
-  ciudad: string;       // viene de ciudad
-  descuentos?: string | null; // viene de descuento
-  mapLink?: string | null;    // viene de ubicacionMaps
-  
-  // Fotos de la galería
-  img1?: string | null; // viene de fotoDescripcion1
-  img2?: string | null; // viene de fotoDescripcion2
-  img3?: string | null; // viene de fotoDescripcion3
+  id: number;
+  titulo: string;
+  descripcion: string;
+  imagen: string | null;
+  categoria: string;
+  pais: string;
+  ciudad: string;
+  descuentos?: string | null;
+  mapLink?: string | null;
+  img1?: string | null;
+  img2?: string | null;
+  img3?: string | null;
 }
 
 export default function HomeScreen() {
   const navigator: any = useNavigation();
   const safeAreaInsets = useSafeAreaInsets();
   
-  // --- ESTADOS DE DATOS API ---
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,16 +76,12 @@ export default function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState<string>('Todas');
   const [isCityMenuOpen, setIsCityMenuOpen] = useState(false);
 
-  
-const fetchLugares = async () => {
+  const fetchLugares = async () => {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_API_URL;
-      
-      // 2. Recuracion del token guardado
       const token = await SecureStore.getItemAsync('jwt'); 
       console.log("Token recuperado:", token ? "Token existe" : "TOKEN ES NULL");
 
-      // 3. Envio el token en los headers
       const response = await fetch(`${baseUrl}/api/empresa`, {
         method: 'GET',
         headers: {
@@ -100,21 +91,17 @@ const fetchLugares = async () => {
       });
       
       const data = await response.json();
-      console.log("Datos crudos del server:", data); // Verifica que sea un Array de objeto
 
-      // 4. VALIDACIÓN DE SEGURIDAD (Para evitar el error "map is not a function")
       if (!Array.isArray(data)) {
         console.error("Error: La API no devolvió un array. Devolvió:", data);
-        // Si el token venció o es inválido, podrías redirigir al login aquí
         if (response.status === 401) {
             Alert.alert("Sesión expirada", "Por favor inicia sesión nuevamente.");
-            // navigator.navigate('Login'); 
         }
         return; 
       }
       
       const formattedData = data.map((item: any) => ({
-        id: item.empresa_id, // Asegúrate que tu DB usa empresa_id o id
+        id: item.empresa_id,
         titulo: item.nombreCompleto,
         descripcion: item.descripcion || "Sin descripción",
         imagen: item.fotoPerfil,
@@ -128,7 +115,6 @@ const fetchLugares = async () => {
         img3: item.fotoDescripcion3,
       }));
       
-      console.log("Datos formateados listos:", formattedData.length);
       setLugares(formattedData);
 
     } catch (error) {
@@ -155,13 +141,9 @@ const fetchLugares = async () => {
 
   const filteredLugares = useMemo(() => {
     return lugares.filter(lugar => {
-      // Nota: Comparamos ignorando mayúsculas/minúsculas para evitar errores
       const matchCountry = lugar.pais?.toLowerCase() === selectedCountry.toLowerCase();
       const matchCity = selectedCity === 'Todas' || lugar.ciudad?.toLowerCase() === selectedCity.toLowerCase();
       const matchCategory = selectedCategory === 'Todos' || lugar.categoria?.toLowerCase() === selectedCategory.toLowerCase();
-      
-      // Si quieres ser estricto con los filtros, usa return matchCountry && matchCity && matchCategory;
-      // Por ahora, retornaremos true para que VEAS los datos si los filtros no coinciden exactamente
       return matchCountry && matchCity && matchCategory;
     });
   }, [selectedCategory, selectedCity, selectedCountry, lugares]);
@@ -179,11 +161,11 @@ const fetchLugares = async () => {
     }
     const supported = await Linking.canOpenURL(mapLink);
     if (supported) await Linking.openURL(mapLink);
-    else await Linking.openURL(mapLink); // Intentar abrir de todas formas
+    else await Linking.openURL(mapLink);
   };
 
   const getImageSource = (img: string | null | undefined) => {
-    if (!img) return { uri: 'https://via.placeholder.com/400x300.png?text=Sin+Imagen' };
+    if (!img) return { uri: 'https://via.placeholder.com/400x300.png?text=Qronnos' };
     return { uri: img };
   };
 
@@ -199,11 +181,11 @@ const fetchLugares = async () => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
-      {/* HEADER */}
+      {/* HEADER PRINCIPAL */}
       <View style={[styles.header, { paddingTop: safeAreaInsets.top + 10 }]}>
         <View style={styles.headerTopRow}>
             <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
-                <Ionicons name="grid-outline" size={24} color={COLORS.text} />
+                <Ionicons name="grid-outline" size={20} color={COLORS.text} />
             </TouchableOpacity>
             
             <View style={{ alignItems: 'center' }}>
@@ -212,24 +194,22 @@ const fetchLugares = async () => {
             </View>
 
             <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="search-outline" size={24} color={COLORS.text} />
+                <Ionicons name="search-outline" size={20} color={COLORS.text} />
             </TouchableOpacity>
         </View>
 
         <View style={styles.locationFiltersContainer}>
-            <View style={{alignItems: 'flex-start', marginBottom: 8}}>
-                <TouchableOpacity 
-                    style={styles.countrySelectorBtn}
-                    onPress={() => {
-                        setIsCountryMenuOpen(!isCountryMenuOpen);
-                        setIsCityMenuOpen(false);
-                    }}
-                >
-                    <Ionicons name="globe-outline" size={14} color={COLORS.textSec} />
-                    <Text style={styles.countrySelectorText}>País: <Text style={{color: COLORS.accent}}>{selectedCountry}</Text></Text>
-                    <Ionicons name="chevron-down" size={12} color={COLORS.textSec} />
-                </TouchableOpacity>
-            </View>
+            <TouchableOpacity 
+                style={styles.countrySelectorBtn}
+                onPress={() => {
+                    setIsCountryMenuOpen(!isCountryMenuOpen);
+                    setIsCityMenuOpen(false);
+                }}
+            >
+                <Ionicons name="globe-outline" size={12} color={COLORS.textSec} />
+                <Text style={styles.countrySelectorText}>{selectedCountry}</Text>
+                <Ionicons name="chevron-down" size={10} color={COLORS.textSec} />
+            </TouchableOpacity>
 
             <TouchableOpacity 
                 style={styles.citySelectorBtn} 
@@ -238,32 +218,29 @@ const fetchLugares = async () => {
                     setIsCountryMenuOpen(false);
                 }}
             >
-                <Ionicons name="location-sharp" size={18} color={COLORS.accent} />
+                <Ionicons name="location-sharp" size={16} color={COLORS.accent} />
                 <Text style={styles.citySelectorText}>
-                    {selectedCity === 'Todas' ? `Explorar ${selectedCountry}` : selectedCity}
+                    {selectedCity === 'Todas' ? `Explorando todo` : selectedCity}
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={COLORS.textSec} />
             </TouchableOpacity>
         </View>
       </View>
       
-      {/* DROPDOWNS */}
+      {/* MENUS DESPLEGABLES */}
       {isCountryMenuOpen && (
         <View style={[styles.floatingDropdown, { top: safeAreaInsets.top + 110 }]}>
-            <Text style={styles.dropdownHeaderLabel}>Selecciona tu país</Text>
+            <Text style={styles.dropdownHeaderLabel}>Selecciona país</Text>
             {COUNTRIES_LIST.map((pais) => (
             <TouchableOpacity 
                 key={pais}
                 style={styles.dropdownItem}
                 onPress={() => handleCountryChange(pais)}
             >
-                <Text style={[
-                    styles.dropdownText, 
-                    selectedCountry === pais && { color: COLORS.accent, fontFamily: FONTS.textBold }
-                ]}>
+                <Text style={[styles.dropdownText, selectedCountry === pais && styles.activeDropdownText]}>
                     {pais}
                 </Text>
-                {selectedCountry === pais && <Ionicons name="checkmark" size={18} color={COLORS.accent}/>}
+                {selectedCountry === pais && <Ionicons name="checkmark" size={16} color={COLORS.accent}/>}
             </TouchableOpacity>
             ))}
         </View>
@@ -278,13 +255,10 @@ const fetchLugares = async () => {
                 style={styles.dropdownItem}
                 onPress={() => { setSelectedCity(ciudad); setIsCityMenuOpen(false); }}
             >
-                <Text style={[
-                    styles.dropdownText, 
-                    selectedCity === ciudad && { color: COLORS.accent, fontFamily: FONTS.textBold }
-                ]}>
+                <Text style={[styles.dropdownText, selectedCity === ciudad && styles.activeDropdownText]}>
                     {ciudad}
                 </Text>
-                {selectedCity === ciudad && <Ionicons name="checkmark" size={18} color={COLORS.accent}/>}
+                {selectedCity === ciudad && <Ionicons name="checkmark" size={16} color={COLORS.accent}/>}
             </TouchableOpacity>
             ))}
         </View>
@@ -292,86 +266,107 @@ const fetchLugares = async () => {
 
       <ScrollView 
         showsVerticalScrollIndicator={false} 
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />
         }
       >
-        {/* CATEGORIAS */}
+        {/* TABS DE CATEGORIAS */}
         <View style={styles.categoriesContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
             {CATEGORIES.map((cat) => (
                 <TouchableOpacity
                 key={cat}
                 onPress={() => setSelectedCategory(cat)}
-                style={styles.tabItem}
+                style={[styles.tabItem, selectedCategory === cat && styles.tabItemActive]}
                 >
                 <Text style={[styles.tabText, selectedCategory === cat && styles.tabTextActive]}>
                     {cat}
                 </Text>
-                {selectedCategory === cat && <View style={styles.activeDot} />}
                 </TouchableOpacity>
             ))}
             </ScrollView>
         </View>
 
-        {/* LISTA DE CARDS */}
+        {/* LISTA DE ALIADOS */}
         <View style={styles.listContainer}>
           <Text style={styles.resultsText}>
-            Mostrando resultados en <Text style={{color: COLORS.accent, fontFamily: FONTS.textBold}}>{selectedCountry}</Text>
-             {selectedCity !== 'Todas' ? ` > ${selectedCity}` : ''}
-          </Text>
-          <Text style={[styles.resultsText, {marginTop: -10, fontSize: 11}]}>
-             {filteredLugares.length} {filteredLugares.length === 1 ? 'Aliado encontrado' : 'Aliados encontrados'}
+            {filteredLugares.length} {filteredLugares.length === 1 ? 'Lugar exclusivo' : 'Lugares exclusivos'} encontrados
           </Text>
           
-          {filteredLugares.map((lugar) => (
+          {filteredLugares.map((lugar) => {
+            const bgImage = lugar.img1 ? { uri: lugar.img1 } : getImageSource(lugar.imagen);
+            
+            return (
             <TouchableOpacity 
               key={lugar.id} 
               onPress={() => { setSelectedLugar(lugar); setModalVisible(true); }}
               activeOpacity={0.9}
-              style={styles.proCard}
+              style={styles.premiumCard}
             >
-              <View style={styles.imageContainer}>
-                  {/* AQUÍ VA EL LOGO (fotoPerfil) */}
-                  <Image source={getImageSource(lugar.imagen)} style={styles.cardImage} resizeMode="cover" />
-                  
-                  {lugar.descuentos && (
-                    <View style={styles.discountBadge}>
-                        <Text style={styles.discountText}>{lugar.descuentos}</Text>
-                    </View>
-                  )}
-                  <View style={styles.countryBadge}>
-                        <Text style={styles.countryBadgeText}>{lugar.pais}</Text>
+              {/* HEADER DE LA CARD (ATMÓSFERA) */}
+              <View style={styles.cardHeaderWrapper}>
+                  {/* Imagen de fondo con MÁS BRILLO y NITIDEZ */}
+                  <Image 
+                    source={bgImage} 
+                    style={[
+                        styles.cardAtmosphereImage, 
+                        // Si no hay img1, hacemos zoom al logo en el fondo
+                        !lugar.img1 && { transform: [{ scale: 1.5 }], opacity: 0.15 } 
+                    ]} 
+                    resizeMode={lugar.img1 ? "cover" : "contain"}
+                    blurRadius={lugar.img1 ? 0 : 10}
+                  />
+                  {/* Overlay más suave para dejar pasar la luz */}
+                  <View style={styles.cardOverlay} />
+
+                  <View style={styles.cardTopBadges}>
+                     {lugar.descuentos && (
+                        <View style={styles.promoBadge}>
+                            <Text style={styles.promoText}>{lugar.descuentos}</Text>
+                        </View>
+                     )}
+                     <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{lugar.categoria}</Text>
+                     </View>
                   </View>
               </View>
               
-              <View style={styles.cardContent}>
-                <View style={styles.cardHeaderRow}>
-                    <Text style={styles.cardCategory}>{lugar.categoria.toUpperCase()}</Text>
-                    <View style={styles.locationRow}>
-                        <Ionicons name="pin-outline" size={14} color={COLORS.textSec} />
-                        <Text style={styles.cardCity}>{lugar.ciudad}</Text>
-                    </View>
-                </View>
-                
-                <Text style={styles.cardTitle}>{lugar.titulo}</Text>
-                <Text style={styles.cardDesc} numberOfLines={1}>{lugar.descripcion}</Text>
-                
-                <View style={styles.cardFooter}>
-                    <Text style={styles.moreInfoText}>Ver detalles</Text>
-                    <Ionicons name="arrow-forward" size={16} color={COLORS.accent} />
-                </View>
+              {/* CONTENIDO SUPERPUESTO */}
+              <View style={styles.cardBody}>
+                  <View style={styles.logoMedallion}>
+                      <Image 
+                        source={getImageSource(lugar.imagen)} 
+                        style={styles.logoImage} 
+                        resizeMode="contain"
+                      />
+                  </View>
+
+                  <View style={styles.cardInfo}>
+                     <Text style={styles.cardTitle}>{lugar.titulo}</Text>
+                     
+                     <View style={styles.locationRow}>
+                        <Ionicons name="location-sharp" size={12} color={COLORS.accent} />
+                        <Text style={styles.cardLocation}>{lugar.ciudad} • {lugar.pais}</Text>
+                     </View>
+
+                     <Text style={styles.cardDesc} numberOfLines={2}>
+                        {lugar.descripcion}
+                     </Text>
+
+                     <View style={styles.cardFooterBtn}>
+                        <Text style={styles.btnText}>Explorar</Text>
+                        <Ionicons name="arrow-forward" size={14} color={COLORS.textSec} />
+                     </View>
+                  </View>
               </View>
             </TouchableOpacity>
-          ))}
+          )})}
 
           {filteredLugares.length === 0 && (
-             <View style={{alignItems: 'center', marginTop: 30}}>
-                 <Ionicons name="planet-outline" size={50} color={COLORS.border} />
-                 <Text style={{color: COLORS.textSec, fontFamily: FONTS.textMedium, marginTop: 10}}>
-                     No hay aliados en esta zona aún.
-                 </Text>
+             <View style={styles.emptyState}>
+                 <Ionicons name="planet-outline" size={40} color={COLORS.border} />
+                 <Text style={styles.emptyText}>No hay resultados en esta zona.</Text>
              </View>
           )}
         </View>
@@ -383,64 +378,65 @@ const fetchLugares = async () => {
             <TouchableOpacity style={styles.modalBackdrop} onPress={() => setModalVisible(false)} />
             
             <View style={styles.modalCard}>
-                <View style={styles.modalImageWrapper}>
-                    {/* EN EL MODAL MOSTRAMOS TAMBIÉN EL LOGO EN GRANDE */}
-                    <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalHeroImage} resizeMode="cover" />
+                <View style={styles.modalHeaderImageContainer}>
+                    {/* Fondo modal con MÁS BRILLO */}
+                    <Image 
+                        source={selectedLugar?.img1 ? {uri: selectedLugar.img1} : getImageSource(selectedLugar?.imagen)} 
+                        style={styles.modalHeroImage} 
+                        resizeMode="cover"
+                        blurRadius={selectedLugar?.img1 ? 0 : 20}
+                    />
+                    {/* Gradiente más suave */}
+                    <View style={styles.modalGradient} />
+                    
                     <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
-                        <Ionicons name="close" size={24} color="#FFF" />
+                        <Ionicons name="chevron-down" size={24} color="#FFF" />
                     </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-                    <View style={styles.modalHeader}>
-                        <View style={styles.tagPill}>
-                            <Text style={styles.tagText}>{selectedLugar?.categoria}</Text>
-                        </View>
-                        <View style={styles.cityPill}>
-                            <Ionicons name="location-sharp" size={14} color={COLORS.textSec} />
-                            <Text style={styles.cityText}>{selectedLugar?.ciudad}, {selectedLugar?.pais}</Text>
-                        </View>
+                    <View style={styles.modalLogoWrapper}>
+                        <Image source={getImageSource(selectedLugar?.imagen)} style={styles.modalLogo} resizeMode="contain" />
                     </View>
 
                     <Text style={styles.modalTitle}>{selectedLugar?.titulo}</Text>
-                    
-                    <View style={styles.divider} />
-                    
-                    <Text style={styles.sectionLabel}>ACERCA DEL LUGAR</Text>
-                    <Text style={styles.modalDescription}>{selectedLugar?.descripcion}</Text>
+                    <View style={{flexDirection:'row', justifyContent:'center', marginBottom: 20}}>
+                         <Text style={styles.modalSubtitle}>{selectedLugar?.categoria} • {selectedLugar?.ciudad}</Text>
+                    </View>
 
-                    {/* GALERÍA DE IMÁGENES (fotoDescripcion 1, 2, 3) */}
+                    {selectedLugar?.descuentos && (
+                        <View style={styles.modalPromoBox}>
+                            <Ionicons name="star" size={20} color={COLORS.gold} />
+                            <View style={{marginLeft: 10, flex: 1}}>
+                                <Text style={styles.modalPromoTitle}>Beneficio Exclusivo</Text>
+                                <Text style={styles.modalPromoVal}>{selectedLugar.descuentos}</Text>
+                            </View>
+                        </View>
+                    )}
+
+                    <Text style={styles.sectionTitle}>SOBRE EL LUGAR</Text>
+                    <Text style={styles.modalDesc}>{selectedLugar?.descripcion}</Text>
+
                     {(selectedLugar?.img1 || selectedLugar?.img2 || selectedLugar?.img3) && (
-                      <View style={{marginBottom: 20}}>
-                        <Text style={styles.sectionLabel}>GALERÍA</Text>
+                      <View style={{marginVertical: 20}}>
+                        <Text style={styles.sectionTitle}>GALERÍA</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                          {[selectedLugar.img1, selectedLugar.img2, selectedLugar.img3].map((img, index) => (
-                            img ? <Image key={index} source={{uri: img}} style={{width: 120, height: 120, borderRadius: 12, marginRight: 10}} /> : null
+                          {[selectedLugar.img1, selectedLugar.img2, selectedLugar.img3].map((img, idx) => (
+                            img ? <Image key={idx} source={{uri: img}} style={styles.galleryImg} /> : null
                           ))}
                         </ScrollView>
                       </View>
                     )}
 
-                    {selectedLugar?.descuentos ? (
-                        <View style={styles.couponContainer}>
-                            <View style={styles.couponLeft}>
-                                <Ionicons name="gift-outline" size={24} color={COLORS.accent} />
-                            </View>
-                            <View style={styles.couponRight}>
-                                <Text style={styles.couponTitle}>Beneficio Qronnos</Text>
-                                <Text style={styles.couponValue}>{selectedLugar.descuentos}</Text>
-                            </View>
-                        </View>
-                    ) : null}
-
-                    {/* BOTÓN DE GOOGLE MAPS */}
                     <TouchableOpacity 
                         onPress={() => handleOpenMaps(selectedLugar?.mapLink)} 
-                        style={[styles.actionButton, {marginBottom: 40}]}
+                        style={styles.mainActionBtn}
                     >
-                        <Text style={styles.actionButtonText}>IR AHORA</Text>
-                        <Ionicons name="navigate" size={20} color="#000" style={{marginLeft: 8}}/>
+                        <Text style={styles.mainActionBtnText}>Cómo llegar</Text>
+                        <Ionicons name="map" size={20} color={COLORS.background} />
                     </TouchableOpacity>
+                    
+                    <View style={{height: 40}}/>
                 </ScrollView>
             </View>
         </View>
@@ -451,276 +447,163 @@ const fetchLugares = async () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    zIndex: 10,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  headerSubtitle: { 
-    fontFamily: FONTS.textBold, 
-    fontSize: 10, 
-    color: COLORS.accent, 
-    letterSpacing: 3, 
-    marginBottom: 2
-  },
-  headerTitle: { 
-    fontFamily: FONTS.title, 
-    fontSize: 26, 
-    color: COLORS.text, 
-    textAlign: 'center' 
-  },
-  iconButton: { padding: 8, backgroundColor: COLORS.cardBg, borderRadius: 12 },
-  locationFiltersContainer: { marginBottom: 5 },
-  countrySelectorBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'transparent',
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      alignSelf: 'flex-start'
-  },
-  countrySelectorText: {
-    color: COLORS.textSec,
-    fontSize: 12,
-    fontFamily: FONTS.textMedium,
-    marginHorizontal: 6
-  },
-  citySelectorBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  
+  // HEADER
+  header: { backgroundColor: COLORS.background, paddingHorizontal: 24, paddingBottom: 15, zIndex: 10 },
+  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  headerSubtitle: { fontFamily: FONTS.textBold, fontSize: 9, color: COLORS.accent, letterSpacing: 4, marginBottom: 2 },
+  headerTitle: { fontFamily: FONTS.title, fontSize: 24, color: COLORS.text, letterSpacing: 1 },
+  iconButton: { width: 40, height: 40, backgroundColor: COLORS.cardBg, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+  
+  // FILTERS
+  locationFiltersContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
+  countrySelectorBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#1a1d24' },
+  countrySelectorText: { color: COLORS.textSec, fontSize: 11, fontFamily: FONTS.textMedium, marginHorizontal: 6 },
+  citySelectorBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 30, borderWidth: 1, borderColor: COLORS.accent },
+  citySelectorText: { color: COLORS.text, marginHorizontal: 8, fontSize: 13, fontFamily: FONTS.textMedium },
+
+  // DROPDOWNS
+  floatingDropdown: { position: 'absolute', left: 24, right: 24, backgroundColor: '#1a1d24', borderRadius: 16, padding: 8, zIndex: 100, borderWidth: 1, borderColor: COLORS.border, elevation: 20 },
+  dropdownHeaderLabel: { fontSize: 10, color: COLORS.textSec, fontFamily: FONTS.textBold, paddingHorizontal: 12, paddingVertical: 8, textTransform: 'uppercase' },
+  dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.03)' },
+  dropdownText: { color: COLORS.textSec, fontSize: 14, fontFamily: FONTS.textRegular },
+  activeDropdownText: { color: COLORS.accent, fontFamily: FONTS.textBold },
+
+  // CATEGORIES
+  categoriesContainer: { marginTop: 20, marginBottom: 15 },
+  tabItem: { marginRight: 15, paddingVertical: 8, paddingHorizontal: 18, borderRadius: 20, backgroundColor: COLORS.cardBg, borderWidth: 1, borderColor: COLORS.border },
+  tabItemActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  tabText: { fontSize: 13, color: COLORS.textSec, fontFamily: FONTS.textMedium },
+  tabTextActive: { color: '#000', fontFamily: FONTS.textBold },
+
+  // LIST
+  listContainer: { paddingHorizontal: 24 },
+  resultsText: { color: COLORS.textSec, fontSize: 11, marginBottom: 20, fontFamily: FONTS.textMedium, opacity: 0.6, textAlign: 'center' },
+
+  // --- PREMIUM CARD DESIGN ---
+  premiumCard: {
     backgroundColor: COLORS.cardBg,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border
-  },
-  citySelectorText: { 
-    flex: 1, 
-    color: COLORS.text, 
-    marginHorizontal: 10, 
-    fontSize: 14, 
-    fontFamily: FONTS.textMedium 
-  },
-  floatingDropdown: {
-    position: 'absolute',
-    left: 20, right: 20,
-    backgroundColor: '#232936',
-    borderRadius: 12,
-    padding: 5,
-    zIndex: 100,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border
-  },
-  dropdownHeaderLabel: {
-      fontSize: 10,
-      color: COLORS.textSec,
-      fontFamily: FONTS.textBold,
-      paddingHorizontal: 15,
-      paddingVertical: 8,
-      textTransform: 'uppercase'
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)'
-  },
-  dropdownText: { 
-    color: COLORS.textSec, 
-    fontSize: 14, 
-    fontFamily: FONTS.textRegular 
-  },
-  categoriesContainer: { marginTop: 15, marginBottom: 10 },
-  tabItem: { marginRight: 25, alignItems: 'center', paddingVertical: 5 },
-  tabText: { 
-    fontSize: 14, 
-    color: COLORS.textSec, 
-    fontFamily: FONTS.textMedium 
-  },
-  tabTextActive: { 
-    color: COLORS.text, 
-    fontFamily: FONTS.textBold 
-  },
-  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accent, marginTop: 4 },
-  listContainer: { paddingHorizontal: 20, paddingTop: 10 },
-  resultsText: { 
-    color: COLORS.textSec, 
-    fontSize: 12, 
-    marginBottom: 15, 
-    fontFamily: FONTS.textMedium,
-    letterSpacing: 0.5
-  },
-  proCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 20,
-    marginBottom: 24,
+    borderRadius: 24,
+    marginBottom: 30,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.border
+    borderColor: '#23262f',
   },
-  imageContainer: { height: 180, width: '100%', position: 'relative' },
-  cardImage: { width: '100%', height: '100%' },
-  discountBadge: {
-    position: 'absolute',
-    bottom: 10, left: 10,
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 6
-  },
-  discountText: { 
-    color: '#000', 
-    fontFamily: FONTS.textBold, 
-    fontSize: 12 
-  },
-  countryBadge: {
-      position: 'absolute',
-      top: 10, right: 10,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      paddingHorizontal: 8, paddingVertical: 2,
-      borderRadius: 4,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)'
-  },
-  countryBadgeText: {
-      color: '#fff', fontSize: 10, fontFamily: FONTS.textMedium
-  },
-  cardContent: { padding: 16 },
-  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  cardCategory: { 
-    fontSize: 10, 
-    color: COLORS.accent, 
-    fontFamily: FONTS.textBold, 
-    letterSpacing: 1 
-  },
-  locationRow: { flexDirection: 'row', alignItems: 'center' },
-  cardCity: { 
-    fontSize: 12, 
-    color: COLORS.textSec, 
-    marginLeft: 4, 
-    fontFamily: FONTS.textMedium 
-  },
-  cardTitle: { 
-    fontSize: 18, 
-    color: COLORS.text, 
-    marginBottom: 6,
-    fontFamily: FONTS.title 
-  },
-  cardDesc: { 
-    fontSize: 13, 
-    color: COLORS.textSec, 
-    marginBottom: 14, 
-    fontFamily: FONTS.textRegular 
-  },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12 },
-  moreInfoText: { 
-    color: COLORS.accent, 
-    fontSize: 13, 
-    fontFamily: FONTS.textBold, 
-    marginRight: 5 
-  },
-  modalContainer: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)' },
-  modalCard: {
-    height: '85%',
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+  cardHeaderWrapper: {
+    height: 140,
+    width: '100%',
+    position: 'relative',
+    backgroundColor: '#16181d',
     overflow: 'hidden'
   },
-  modalImageWrapper: { height: 250, width: '100%', position: 'relative' },
-  modalHeroImage: { width: '100%', height: '100%' },
-  closeBtn: {
-    position: 'absolute', top: 15, right: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20, padding: 8
+  cardAtmosphereImage: {
+    width: '100%',
+    height: '100%',
+    // AJUSTE DE BRILLO: Aumentado de 0.6 a 0.85 para más viveza
+    opacity: 0.85 
   },
-  modalContent: { flex: 1, padding: 25 },
-  modalHeader: { flexDirection: 'row', marginBottom: 15 },
-  tagPill: { backgroundColor: COLORS.cardBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 10, borderWidth: 1, borderColor: COLORS.border },
-  tagText: { color: COLORS.text, fontSize: 11, fontFamily: FONTS.textBold },
-  cityPill: { flexDirection: 'row', alignItems: 'center' },
-  cityText: { color: COLORS.textSec, fontSize: 13, marginLeft: 5, fontFamily: FONTS.textMedium },
-  modalTitle: { 
-    fontSize: 24, 
-    color: COLORS.text, 
-    marginBottom: 10,
-    fontFamily: FONTS.title
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    // AJUSTE DE BRILLO: Reducido de 0.3 a 0.2 para dejar pasar más luz
+    backgroundColor: 'rgba(0,0,0,0.2)' 
   },
-  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 15 },
-  sectionLabel: { 
-    fontSize: 11, 
-    color: COLORS.textSec, 
-    marginBottom: 8, 
-    letterSpacing: 1,
-    fontFamily: FONTS.textBold 
-  },
-  modalDescription: { 
-    fontSize: 15, 
-    color: '#bdc1c6', 
-    lineHeight: 24, 
-    marginBottom: 25,
-    fontFamily: FONTS.textRegular 
-  },
-  couponContainer: {
+  cardTopBadges: {
+    position: 'absolute',
+    top: 15, left: 15, right: 15,
     flexDirection: 'row',
-    backgroundColor: '#131f1c',
-    borderRadius: 16,
-    padding: 15,
-    alignItems: 'center',
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: 'rgba(1, 195, 142, 0.3)',
-    borderStyle: 'dashed'
+    justifyContent: 'space-between'
   },
-  couponLeft: { marginRight: 15 },
-  couponRight: { flex: 1 },
-  couponTitle: { 
-    color: COLORS.accent, 
-    fontSize: 11, 
-    fontFamily: FONTS.textBold, 
-    textTransform: 'uppercase' 
-  },
-  couponValue: { 
-    color: COLORS.text, 
-    fontSize: 16, 
-    fontFamily: FONTS.textBold,
-    marginTop: 2
-  },
-  actionButton: {
+  promoBadge: {
     backgroundColor: COLORS.accent,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: COLORS.accent,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 8,
+  },
+  promoText: { color: '#000', fontFamily: FONTS.textBold, fontSize: 10, textTransform: 'uppercase' },
+  categoryBadge: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+  },
+  categoryBadgeText: { color: '#fff', fontSize: 10, fontFamily: FONTS.textBold, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // CARD BODY
+  cardBody: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    marginTop: -40,
+  },
+  logoMedallion: {
+    width: 80, height: 80,
+    borderRadius: 25,
+    backgroundColor: '#1E2129',
+    justifyContent: 'center', alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 4,
+    borderColor: COLORS.cardBg,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6
+    shadowRadius: 5,
+    elevation: 8,
+    marginBottom: 12
   },
-  actionButtonText: { 
-    color: '#000', 
-    fontSize: 16, 
-    fontFamily: FONTS.textBold, 
-    letterSpacing: 0.5 
-  }
+  logoImage: { width: '85%', height: '85%' },
+  cardInfo: { },
+  cardTitle: { 
+    fontSize: 20, color: '#fff', fontFamily: FONTS.title, marginBottom: 6, letterSpacing: 0.5 
+  },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  cardLocation: { fontSize: 12, color: COLORS.textSec, fontFamily: FONTS.textRegular, marginLeft: 4 },
+  cardDesc: { fontSize: 13, color: '#8b9bb4', lineHeight: 20, fontFamily: FONTS.textRegular, marginBottom: 15 },
+  cardFooterBtn: { 
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', 
+    borderBottomWidth: 1, borderBottomColor: COLORS.accent, paddingBottom: 2 
+  },
+  btnText: { color: '#fff', fontSize: 12, fontFamily: FONTS.textBold, marginRight: 6 },
+
+  emptyState: { alignItems: 'center', marginTop: 40, opacity: 0.5 },
+  emptyText: { color: COLORS.textSec, marginTop: 10, fontFamily: FONTS.textRegular },
+
+  // --- MODAL PREMIUM ---
+  modalContainer: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)' },
+  modalCard: { height: '92%', backgroundColor: COLORS.background, borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden' },
+  modalHeaderImageContainer: { height: 250, width: '100%', position: 'relative' },
+  modalHeroImage: { width: '100%', height: '100%' },
+  modalGradient: { 
+    ...StyleSheet.absoluteFillObject, 
+    // AJUSTE DE BRILLO MODAL: Reducido de 0.4 a 0.25 para más claridad
+    backgroundColor: 'rgba(0,0,0,0.25)' 
+  },
+  closeBtn: { position: 'absolute', top: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 },
+  
+  modalContent: { flex: 1, marginTop: -60, paddingHorizontal: 24 },
+  modalLogoWrapper: { 
+    width: 100, height: 100, borderRadius: 50, 
+    backgroundColor: COLORS.background, alignSelf: 'center', 
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 15, borderWidth: 4, borderColor: COLORS.background,
+    shadowColor: "#000", shadowOffset: {width:0, height:5}, shadowOpacity:0.3, elevation:10
+  },
+  modalLogo: { width: 70, height: 70 },
+  modalTitle: { fontSize: 28, color: COLORS.text, fontFamily: FONTS.title, textAlign: 'center', marginBottom: 5 },
+  modalSubtitle: { fontSize: 14, color: COLORS.textSec, fontFamily: FONTS.textRegular, textAlign: 'center', opacity: 0.8 },
+  
+  modalPromoBox: { 
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E222B', 
+    padding: 16, borderRadius: 16, marginBottom: 25, borderWidth: 1, borderColor: '#333' 
+  },
+  modalPromoTitle: { color: COLORS.gold, fontSize: 11, fontFamily: FONTS.textBold, textTransform: 'uppercase', marginBottom: 2 },
+  modalPromoVal: { color: '#fff', fontSize: 16, fontFamily: FONTS.textMedium },
+
+  sectionTitle: { fontSize: 11, color: COLORS.textSec, fontFamily: FONTS.textBold, letterSpacing: 1, marginBottom: 12, textTransform: 'uppercase' },
+  modalDesc: { fontSize: 15, color: '#ccc', lineHeight: 24, fontFamily: FONTS.textRegular, marginBottom: 30 },
+  galleryImg: { width: 140, height: 90, borderRadius: 12, marginRight: 10, backgroundColor: '#222' },
+  
+  mainActionBtn: {
+    backgroundColor: COLORS.accent, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 18, marginBottom: 20,
+    shadowColor: COLORS.accent, shadowOffset: {width:0, height: 4}, shadowOpacity: 0.3, elevation: 8
+  },
+  mainActionBtnText: { color: COLORS.background, fontFamily: FONTS.textBold, fontSize: 16, marginRight: 8 }
 });
