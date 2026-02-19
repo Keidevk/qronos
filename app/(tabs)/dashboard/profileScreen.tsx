@@ -9,7 +9,6 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View
 } from "react-native";
 import { QrCodeSvg } from 'react-native-qr-svg';
@@ -98,7 +97,7 @@ export default function ProfileScreen() {
       }
 
       loadUserDataAndGenerateQr();
-      return () => {};
+      return () => { };
     }, [])
   );
 
@@ -124,42 +123,39 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-      
+
       {/* HEADER PROFESIONAL */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigator.openDrawer()} style={styles.iconButton}>
-          <Ionicons name="grid-outline" size={24} color={COLORS.text} />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>MI PERFIL</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
         {/* TARJETA DE PERFIL TIPO MEMBRESÍA */}
         <View style={styles.profileCard}>
           <View style={styles.cardHeader}>
-             <Text style={styles.brandName}>QRONNOS</Text>
-             
+            <Text style={styles.brandName}>QRONNOS</Text>
+
           </View>
-          
+
           <View style={styles.userInfoSection}>
             <Text style={styles.userName}>{nombreClienteState.toUpperCase() || 'USUARIO'}</Text>
             <View style={styles.badgeContainer}>
-                <Text style={styles.userLabel}>CLIENTE EXCLUSIVO</Text>
+              <Text style={styles.userLabel}>CLIENTE EXCLUSIVO</Text>
             </View>
           </View>
 
           {/* CONTENEDOR DEL QR REFINADO */}
           <View style={styles.qrWrapper}>
             <QrCodeSvg
-              value={qrData} 
+              value={qrData}
               frameSize={180}
               contentCells={5}
               backgroundColor="white"
               color="#000"
             />
           </View>
-          
+
           <View style={styles.scanHintContainer}>
             <Ionicons name="scan-outline" size={18} color={COLORS.accent} />
             <Text style={styles.footerNoteCard}>Identificación Digital</Text>
