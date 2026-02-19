@@ -139,7 +139,7 @@ export default function CompanyScreen() {
             const responseEmpresa = await fetch(`${API_URL}/api/empresa/${id}`);
             if (responseEmpresa.ok) {
                 const data = await responseEmpresa.json();
-                
+
                 // Validar categoría entrante
                 const catFromBd = data.categoria;
                 const finalCat = VALID_CATEGORIES.includes(catFromBd) ? catFromBd : VALID_CATEGORIES[0];
@@ -167,7 +167,7 @@ export default function CompanyScreen() {
     const updateEmpresaData = async () => {
         if (!empresaId) return;
         setIsSaving(true);
-        
+
         try {
             const API_URL = process.env.EXPO_PUBLIC_API_URL;
             const data = new FormData();
@@ -201,8 +201,8 @@ export default function CompanyScreen() {
 
             const response = await fetch(`${API_URL}/api/empresa/${empresaId}`, {
                 method: 'PUT',
-                headers: { 
-                    'Accept': 'application/json' 
+                headers: {
+                    'Accept': 'application/json'
                     // No poner Content-Type manual con FormData
                 },
                 body: data
@@ -261,7 +261,7 @@ export default function CompanyScreen() {
     if (!isAuthorized) {
         return (
             <View style={styles.centerContainer}>
-                <Ionicons name="lock-closed-outline" size={60} color={COLORS.accent} style={{marginBottom: 20}} />
+                <Ionicons name="lock-closed-outline" size={60} color={COLORS.accent} style={{ marginBottom: 20 }} />
                 <Text style={styles.textBase}>ACCESO DENEGADO</Text>
                 <Text style={styles.subText}>{errorMessage}</Text>
             </View>
@@ -269,31 +269,28 @@ export default function CompanyScreen() {
     }
 
     return (
-        <KeyboardAvoidingView 
-            style={{ flex: 1 }} 
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
             <ScrollView style={styles.companyContainer} contentContainerStyle={{ paddingBottom: 50 }}>
                 <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-                
+
                 {/* HEADER */}
                 <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.welcomeText}>ESTADÍSTICAS</Text>
                         <Text style={styles.header}>
-                            PANEL DE <Text style={{color: COLORS.accent}}>EMPRESA</Text>
+                            PANEL DE <Text style={{ color: COLORS.accent }}>EMPRESA</Text>
                         </Text>
                     </View>
-                    <TouchableOpacity onPress={() => (navigator as any).openDrawer()} style={styles.iconButton}>
-                        <Ionicons name="grid-outline" size={24} color={COLORS.text} />
-                    </TouchableOpacity>
                 </View>
 
                 {/* MÉTRICAS */}
                 <View style={{ marginTop: 40 }}>
                     <View style={styles.card}>
                         <View style={styles.iconCircle}>
-                                <Ionicons name="gift-outline" size={26} color={COLORS.accent} />
+                            <Ionicons name="gift-outline" size={26} color={COLORS.accent} />
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.smallTitle}>Puntos otorgados</Text>
@@ -305,7 +302,7 @@ export default function CompanyScreen() {
 
                     <View style={styles.card}>
                         <View style={[styles.iconCircle, { borderColor: '#4F9CF9', backgroundColor: 'rgba(79, 156, 249, 0.1)' }]}>
-                                <Ionicons name="qr-code-outline" size={26} color="#4F9CF9" />
+                            <Ionicons name="qr-code-outline" size={26} color="#4F9CF9" />
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.smallTitle}>Total escaneos</Text>
@@ -319,21 +316,21 @@ export default function CompanyScreen() {
                 {/* --- SECCIÓN: CONFIGURACIÓN --- */}
                 <View style={styles.divider} />
                 <Text style={styles.sectionTitle}>CONFIGURACIÓN DE PERFIL</Text>
-                
+
                 {/* AVISO IMPORTANTE SOBRE EL INDEX */}
                 <View style={styles.infoBoxIndex}>
                     <Ionicons name="eye" size={20} color={COLORS.accent} />
                     <Text style={styles.infoTextIndex}>
-                        <Text style={{fontWeight: 'bold', color: COLORS.accent}}>Visible en el Index: </Text>
+                        <Text style={{ fontWeight: 'bold', color: COLORS.accent }}>Visible en el Index: </Text>
                         La información, categoría y fotos que configures aquí serán las que vean los clientes en la pantalla principal.
                     </Text>
                 </View>
 
                 <View style={styles.formContainer}>
-                    
+
                     {/* FOTO PERFIL */}
                     <View style={{ alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
-                        <Text style={[styles.label, {alignSelf: 'center', marginBottom: 10}]}>Logo de la Empresa</Text>
+                        <Text style={[styles.label, { alignSelf: 'center', marginBottom: 10 }]}>Logo de la Empresa</Text>
                         <TouchableOpacity onPress={() => pickImage('fotoPerfil')} style={styles.profileImageContainer}>
                             {formData.fotoPerfil ? (
                                 <Image source={{ uri: formData.fotoPerfil }} style={styles.profileImage} />
@@ -371,63 +368,63 @@ export default function CompanyScreen() {
                     </View>
 
                     <Text style={styles.label}>Descripción</Text>
-                    <TextInput 
+                    <TextInput
                         style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
                         placeholder="Describe tu empresa..."
                         placeholderTextColor={COLORS.textSec}
                         multiline
                         value={formData.descripcion}
-                        onChangeText={(t) => setFormData({...formData, descripcion: t})}
+                        onChangeText={(t) => setFormData({ ...formData, descripcion: t })}
                     />
 
                     <View style={styles.rowInputs}>
-                        <View style={{flex: 1, marginRight: 10}}>
+                        <View style={{ flex: 1, marginRight: 10 }}>
                             <Text style={styles.label}>País</Text>
-                            <TextInput 
+                            <TextInput
                                 style={styles.input}
                                 placeholder="País"
                                 placeholderTextColor={COLORS.textSec}
                                 value={formData.pais}
-                                onChangeText={(t) => setFormData({...formData, pais: t})}
+                                onChangeText={(t) => setFormData({ ...formData, pais: t })}
                             />
                         </View>
-                        <View style={{flex: 1}}>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.label}>Ciudad</Text>
-                            <TextInput 
+                            <TextInput
                                 style={styles.input}
                                 placeholder="Ciudad"
                                 placeholderTextColor={COLORS.textSec}
                                 value={formData.ciudad}
-                                onChangeText={(t) => setFormData({...formData, ciudad: t})}
+                                onChangeText={(t) => setFormData({ ...formData, ciudad: t })}
                             />
                         </View>
                     </View>
 
                     <Text style={styles.label}>Descuento / Oferta Principal</Text>
-                    <TextInput 
+                    <TextInput
                         style={styles.input}
                         placeholder="Ej: 10% OFF en primera compra"
                         placeholderTextColor={COLORS.textSec}
                         value={formData.descuento}
-                        onChangeText={(t) => setFormData({...formData, descuento: t})}
+                        onChangeText={(t) => setFormData({ ...formData, descuento: t })}
                     />
 
                     <Text style={styles.label}>Link Google Maps</Text>
-                    <TextInput 
+                    <TextInput
                         style={styles.input}
                         placeholder="Enlace de ubicación"
                         placeholderTextColor={COLORS.textSec}
                         value={formData.ubicacionMaps}
-                        onChangeText={(t) => setFormData({...formData, ubicacionMaps: t})}
+                        onChangeText={(t) => setFormData({ ...formData, ubicacionMaps: t })}
                     />
 
                     {/* GALERÍA */}
                     <Text style={styles.label}>Fotos para el Index (Opcional)</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
                         {['fotoDescripcion1', 'fotoDescripcion2', 'fotoDescripcion3'].map((field, index) => (
-                            <TouchableOpacity 
-                                key={field} 
-                                onPress={() => pickImage(field as keyof typeof formData)} 
+                            <TouchableOpacity
+                                key={field}
+                                onPress={() => pickImage(field as keyof typeof formData)}
                                 style={styles.galleryImageContainer}
                             >
                                 {/* @ts-ignore */}
@@ -444,9 +441,9 @@ export default function CompanyScreen() {
                         ))}
                     </ScrollView>
 
-                    <TouchableOpacity 
-                        style={styles.saveButton} 
-                        onPress={updateEmpresaData} 
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={updateEmpresaData}
                         disabled={isSaving}
                     >
                         {isSaving ? (
@@ -465,30 +462,30 @@ export default function CompanyScreen() {
 
 const styles = StyleSheet.create({
     centerContainer: {
-        flex: 1, 
-        backgroundColor: COLORS.background, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        padding: 20 
+        flex: 1,
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20
     },
     textBase: {
-         color: COLORS.text, 
-         fontSize: 22, 
-         fontFamily: FONTS.title,
-         marginBottom: 10 
+        color: COLORS.text,
+        fontSize: 22,
+        fontFamily: FONTS.title,
+        marginBottom: 10
     },
-    subText: { 
-        color: COLORS.textSec, 
-        fontSize: 15, 
+    subText: {
+        color: COLORS.textSec,
+        fontSize: 15,
         textAlign: 'center',
         fontFamily: FONTS.textRegular,
         lineHeight: 22
     },
     companyContainer: {
-         flex: 1, 
-         backgroundColor: COLORS.background,
-         paddingHorizontal: 24,
-         paddingTop: 24
+        flex: 1,
+        backgroundColor: COLORS.background,
+        paddingHorizontal: 24,
+        paddingTop: 24
     },
     headerRow: {
         flexDirection: 'row',
@@ -503,23 +500,23 @@ const styles = StyleSheet.create({
         letterSpacing: 3,
         marginBottom: 4
     },
-    header: { 
-        fontSize: 24, 
+    header: {
+        fontSize: 24,
         fontFamily: FONTS.title,
         color: COLORS.text,
         textAlign: "left",
     },
-    iconButton: { 
-        padding: 10, 
-        backgroundColor: COLORS.cardBg, 
+    iconButton: {
+        padding: 10,
+        backgroundColor: COLORS.cardBg,
         borderRadius: 14,
         borderWidth: 1,
         borderColor: COLORS.border
     },
-    card: { 
-        backgroundColor: COLORS.cardBg, 
-        padding: 24, 
-        borderRadius: 24, 
+    card: {
+        backgroundColor: COLORS.cardBg,
+        padding: 24,
+        borderRadius: 24,
         marginBottom: 20,
         flexDirection: 'row',
         alignItems: 'center',
@@ -537,17 +534,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 20
     },
-    smallTitle: { 
+    smallTitle: {
         fontSize: 11,
         color: COLORS.textSec,
         fontFamily: FONTS.textBold,
         textTransform: 'uppercase',
         letterSpacing: 1
     },
-    scanNumber: { 
-        fontSize: 32, 
+    scanNumber: {
+        fontSize: 32,
         fontFamily: FONTS.title,
-        marginTop: 2 
+        marginTop: 2
     },
     divider: {
         height: 1,
