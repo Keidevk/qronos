@@ -15,15 +15,23 @@ export default function TabLayout() {
         }}
       ></Tabs.Screen>
       <Tabs.Screen
-      name="account"
-      options={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: { display: 'none' },
-      }}
-    ></Tabs.Screen>
+        name="account"
+        options={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarStyle: { display: 'none' },
+        }}
+      ></Tabs.Screen>
       <Tabs.Screen
         name="dashboard"
+        options={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarStyle: { display: 'none' },
+        }}
+      ></Tabs.Screen>
+      <Tabs.Screen
+        name="guest"
         options={{
           headerShown: false,
           tabBarShowLabel: false,

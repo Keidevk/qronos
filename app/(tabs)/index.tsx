@@ -21,12 +21,12 @@ import { auth } from '../../src/firebaseConfig';
 
 // --- PALETA QRONNOS ---
 const COLORS = {
-    background: '#0f1115', 
-    cardBg: '#181b21',     
-    accent: '#01c38e',     
-    text: '#ffffff',       
-    textSec: '#8b9bb4',    
-    border: '#232936'      
+    background: '#0f1115',
+    cardBg: '#181b21',
+    accent: '#01c38e',
+    text: '#ffffff',
+    textSec: '#8b9bb4',
+    border: '#232936'
 };
 
 // --- CONSTANTES DE FUENTES ---
@@ -46,11 +46,11 @@ const { width, height } = Dimensions.get('window');
 export default function HomeScreen() {
     const safeareaInsets = useSafeAreaInsets();
     const router = useRouter();
-    
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    
+
     // --- ESTADOS DE ANIMACIÓN ---
     const [splashVisible, setSplashVisible] = useState(true);
     const splashOpacity = useRef(new Animated.Value(1)).current;
@@ -113,7 +113,7 @@ export default function HomeScreen() {
         async function checkUserIdAndRedirect() {
             try {
                 const userId = await SecureStore.getItemAsync('user_id');
-                const empresaId = await SecureStore.getItemAsync('empresa_id'); 
+                const empresaId = await SecureStore.getItemAsync('empresa_id');
 
                 if (userId || empresaId) {
                     // Si ya hay sesión, redirigimos. 
@@ -132,12 +132,12 @@ export default function HomeScreen() {
             Alert.alert("Campos vacíos", "Por favor ingresa tus credenciales.");
             return;
         }
-        
+
         setIsLoggingIn(true);
         try {
             let expoToken = null;
             try {
-                const projectId = process.env.EXPO_PUBLIC_PROJECT_ID; 
+                const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
                 if (projectId) {
                     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
                     expoToken = tokenData.data;
@@ -148,8 +148,8 @@ export default function HomeScreen() {
 
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-            await reload(user); 
-            
+            await reload(user);
+
             if (!user.emailVerified) {
                 Alert.alert("Verificación Requerida", "Tu correo aún no está verificado.");
                 setIsLoggingIn(false);
@@ -159,16 +159,16 @@ export default function HomeScreen() {
             const response = await fetch(LOGIN_CLIENTE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    email: email.trim(), 
+                body: JSON.stringify({
+                    email: email.trim(),
                     password: password,
-                    pushToken: expoToken 
+                    pushToken: expoToken
                 }),
             });
 
             const data = await response.json();
-            
-            if(response.ok && data.code === 200) {
+
+            if (response.ok && data.code === 200) {
                 const { token, token_empresa, jwt, rol, cliente, empresa } = data;
 
                 if (jwt) await SecureStore.setItemAsync('jwt', String(jwt));
@@ -180,13 +180,13 @@ export default function HomeScreen() {
                     await SecureStore.setItemAsync('nameCliente', String(cliente));
                 }
 
-                if(token_empresa){
+                if (token_empresa) {
                     await SecureStore.setItemAsync('empresa_id', String(token_empresa));
                     await SecureStore.setItemAsync('nameEmpresa', String(empresa));
                 }
 
-                router.replace('/(tabs)/dashboard'); 
-            
+                router.replace('/(tabs)/dashboard');
+
             } else {
                 Alert.alert("Error", data.message || "Credenciales incorrectas.");
             }
@@ -209,44 +209,46 @@ export default function HomeScreen() {
     return (
         <View style={styles.fullContainer}>
             <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-            
+
             {/* --- CONTENIDO DEL LOGIN (Animado con opacidad) --- */}
             <Animated.View style={[styles.loginContentWrapper, { opacity: loginOpacity }]}>
                 <View style={{ paddingTop: safeareaInsets.top + 80, ...styles.containerLogin }}>
-                    
+
                     <Text style={styles.welcomeText}>BIENVENIDO A</Text>
-                    <Text style={styles.Titulo}>INICIAR <Text style={{color: COLORS.accent}}>SESIÓN</Text></Text>
+                    <Text style={styles.Titulo}>INICIAR <Text style={{ color: COLORS.accent }}>SESIÓN</Text></Text>
                     <Text style={styles.Subtitulo}>Accede a tu ecosistema de beneficios</Text>
-                    
+
                     <View style={styles.inputWrapper}>
                         <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
                         <View style={styles.inputShadowContainer}>
                             <TextInput
                                 placeholder="ejemplo@qronnos.com"
-                                placeholderTextColor="rgba(255,255,255,0.2)" 
+                                placeholderTextColor="rgba(255,255,255,0.2)"
                                 style={styles.TextInput}
-                                value={email} 
-                                onChangeText={setEmail} 
-                                keyboardType="email-address" 
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
                                 autoCapitalize="none"
-                            /> 
+                            />
                         </View>
                     </View>
-                    
+
                     <View style={styles.inputWrapper}>
                         <Text style={styles.label}>CONTRASEÑA</Text>
                         <View style={styles.inputShadowContainer}>
                             <TextInput
                                 placeholder="********"
-                                placeholderTextColor="rgba(255,255,255,0.2)" 
+                                placeholderTextColor="rgba(255,255,255,0.2)"
                                 style={styles.TextInput}
-                                value={password} 
-                                onChangeText={setPassword} 
-                                secureTextEntry={true} 
-                            /> 
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={true}
+                            />
                         </View>
                     </View>
-                    
+                    <TouchableOpacity onPress={() => router.push('/(tabs)/guest')} style={styles.registerLink}>
+                        <Text style={styles.linkAccent}>Ver Como invitado</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => router.push('/(tabs)/account/register')} style={styles.registerLink}>
                         <Text style={styles.textRegister}>
                             ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate aquí</Text>
@@ -257,9 +259,9 @@ export default function HomeScreen() {
                             <Text style={styles.linkAccent}>¿Olvidaste tu contraseña?</Text>
                         </Text>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                        onPress={handleLogin} 
+
+                    <TouchableOpacity
+                        onPress={handleLogin}
                         style={[styles.button, isLoggingIn && { opacity: 0.7 }]}
                         disabled={isLoggingIn}
                     >
@@ -271,20 +273,20 @@ export default function HomeScreen() {
                     </TouchableOpacity>
 
                 </View>
-                
+
             </Animated.View>
 
             {/* --- CAPA DE ANIMACIÓN SPLASH (Se superpone) --- */}
             {splashVisible && (
-                <Animated.View 
-                    pointerEvents="none" 
+                <Animated.View
+                    pointerEvents="none"
                     style={[
-                        styles.splashContainer, 
+                        styles.splashContainer,
                         { opacity: splashOpacity }
                     ]}
                 >
-                    <Animated.Image 
-                        source={require('../../assets/images/animacionInicio.png')} 
+                    <Animated.Image
+                        source={require('../../assets/images/animacionInicio.png')}
                         style={[
                             styles.splashImage,
                             { transform: [{ scale: logoScale }] }
@@ -319,7 +321,7 @@ const styles = StyleSheet.create({
     },
     // -----------------------------
     containerLogin: {
-        paddingHorizontal: 35, 
+        paddingHorizontal: 35,
     },
     welcomeText: {
         fontFamily: FONTS.textBold,
@@ -331,8 +333,8 @@ const styles = StyleSheet.create({
     },
     Titulo: {
         fontSize: 28,
-        fontFamily: FONTS.title, 
-        color: COLORS.text, 
+        fontFamily: FONTS.title,
+        color: COLORS.text,
         textAlign: 'center',
     },
     Subtitulo: {
@@ -386,8 +388,8 @@ const styles = StyleSheet.create({
     },
     button: {
         backgroundColor: COLORS.accent,
-        width: "100%", 
-        height: 60, 
+        width: "100%",
+        height: 60,
         marginTop: 40,
         borderRadius: 18,
         justifyContent: 'center',

@@ -1,17 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font'; // Importante para las fuentes
-import { useFocusEffect, useNavigation } from "expo-router";
+import { router, useFocusEffect, useNavigation } from "expo-router";
 import * as SecureStore from 'expo-secure-store';
+import { deleteUser } from 'firebase/auth';
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from "react-native";
 import { QrCodeSvg } from 'react-native-qr-svg';
+import { auth } from '../../../src/firebaseConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -101,6 +105,75 @@ export default function ProfileScreen() {
     }, [])
   );
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      "Eliminar Cuenta",
+      "¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const userId = await SecureStore.getItemAsync('user_id');
+              const jwt = await SecureStore.getItemAsync('jwt');
+
+              if (!userId) {
+                Alert.alert("Error", "No se pudo encontrar el ID de usuario.");
+                return;
+              }
+
+              // 1. Borrar de la base de datos personal
+              const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/cliente/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${jwt}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Error al borrar del backend:", errorData);
+                // Opcional: Decidir si continuar o no. Normalmente si falla el backend, no deberíamos borrar Firebase aún? 
+                // Pero el usuario pidió borrar de ambos.
+              }
+
+              // 2. Borrar de Firebase
+              const user = auth.currentUser;
+              if (user) {
+                await deleteUser(user);
+              }
+
+              // 3. Limpiar SecureStore y navegar
+              await SecureStore.deleteItemAsync('user_id');
+              await SecureStore.deleteItemAsync('jwt');
+              await SecureStore.deleteItemAsync('nameCliente');
+
+              Alert.alert("Cuenta eliminada", "Tu cuenta ha sido eliminada exitosamente.");
+              router.replace('/'); // O la ruta de login que corresponda
+
+            } catch (error: any) {
+              console.error("Error eliminando cuenta:", error);
+              if (error.code === 'auth/requires-recent-login') {
+                Alert.alert(
+                  "Re-autenticación necesaria",
+                  "Para eliminar tu cuenta, debes haber iniciado sesión recientemente. Por favor, cierra sesión e inicia sesión de nuevo antes de intentar borrar tu cuenta."
+                );
+              } else {
+                Alert.alert("Error", "Ocurrió un error al intentar eliminar tu cuenta.");
+              }
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.centerContainer}>
@@ -161,7 +234,9 @@ export default function ProfileScreen() {
             <Text style={styles.footerNoteCard}>Identificación Digital</Text>
           </View>
         </View>
-
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <Text style={styles.deleteAccountButtonText}>Borrar Cuenta</Text>
+        </TouchableOpacity>
         <Text style={styles.footerNote}>Presenta este código en los comercios aliados para recibir tus beneficios.</Text>
       </View>
     </View>
@@ -169,6 +244,17 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  deleteAccountButton: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: COLORS.accent,
+    borderRadius: 12,
+  },
+  deleteAccountButtonText: {
+    color: COLORS.text,
+    fontFamily: FONTS.title,
+    fontSize: 12,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
