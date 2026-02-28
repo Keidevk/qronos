@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
+      "buildNumber": "8",
       "bundleIdentifier": "com.sebas.qronos",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
