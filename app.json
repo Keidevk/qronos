@@ -2,7 +2,7 @@
   "expo": {
     "name": "Qronos",
     "slug": "qronos",
-    "version": "1.0.6",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "qronos",
@@ -16,7 +16,7 @@
       }
     },
     "android": {
-      "versionCode": 7,
+      "versionCode": 8,
       "package": "com.sebas.qronos",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
